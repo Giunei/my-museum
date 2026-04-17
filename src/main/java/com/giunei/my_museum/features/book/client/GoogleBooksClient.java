@@ -4,9 +4,11 @@ import com.giunei.my_museum.features.book.dto.GoogleBooksApiResponse;
 import com.giunei.my_museum.features.book.exeption.ExternalApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Exceptions;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -14,6 +16,8 @@ import java.net.SocketTimeoutException;
 @Component
 @RequiredArgsConstructor
 public class GoogleBooksClient {
+
+    private final WebClient webClient;
 
     private final RestClient restClient;
 
@@ -24,34 +28,35 @@ public class GoogleBooksClient {
         int startIndex = page * size;
 
         try {
-            return restClient.get()
+            return webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/volumes")
                             .queryParam("q", query)
                             .queryParam("startIndex", startIndex)
                             .queryParam("maxResults", size)
                             .queryParam("key", apiKey)
-                            .queryParam("language", "pt")
+                            .queryParam("langRestrict", "pt")
                             .build())
                     .retrieve()
-                    .body(GoogleBooksApiResponse.class);
-        } catch (RestClientResponseException ex) {
-            // HTTP 4xx ou 5xx
-            if (ex.getStatusCode().is4xxClientError()){
-                throw new ExternalApiException("Erro ao buscar para a API de livros", ex);
-            }
-            if (ex.getStatusCode().is5xxServerError()) {
-                throw new ExternalApiException("API de livros está indisponível (5xx)");
+                    .onStatus(HttpStatusCode::is4xxClientError, response ->
+                            response.bodyToMono(String.class)
+                                    .map(body -> new ExternalApiException("Erro 4xx ao buscar livros: " + body))
+                    )
+                    .onStatus(HttpStatusCode::is5xxServerError, response ->
+                            response.bodyToMono(String.class)
+                                    .map(body -> new ExternalApiException("API de livros indisponível (5xx): " + body))
+                    )
+                    .bodyToMono(GoogleBooksApiResponse.class)
+                    .block(); // continua síncrono
+        } catch (Exception ex) {
+            Throwable cause = Exceptions.unwrap(ex);
+
+            if (cause instanceof SocketTimeoutException) {
+                throw new ExternalApiException("Timeout ao chamar API de livros", ex);
             }
 
-            throw new ExternalApiException("Erro inesperado da API externa", ex);
-        } catch (Exception ex) {
-            // Timeout ou conexão
-            if (ex.getCause() instanceof SocketTimeoutException) {
-                throw new ExternalApiException("Timeout ao chamar API de livros");
-            }
-            if (ex.getCause() instanceof ConnectException) {
-                throw new ExternalApiException("Erro de conexão com API de livros");
+            if (cause instanceof ConnectException) {
+                throw new ExternalApiException("Erro de conexão com API de livros", ex);
             }
 
             throw new ExternalApiException("Erro geral ao chamar API externa", ex);
