@@ -9,7 +9,6 @@ import com.giunei.my_museum.features.book.mapper.BookMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -20,14 +19,19 @@ public class BookCacheService {
     private final GoogleBooksClient client;
     private final BookMapper mapper;
     private final BookQueryBuilder queryBuilder;
-    private final ObjectMapper objectMapper;
 
     private static final List<String> CURATED = List.of(
-            "a escola do bem e do mal",
-            "senhor dos aneis",
-            "game of thrones",
-            "percy jackson",
-            "hobbit"
+            "A Metamorfose - Franz Kafka",
+            "Verity - Colleen Hoover",
+            "A Cabeça do Santo - Socorro Acioli",
+            "A Biblioteca da Meia-Noite - Matt Haig",
+            "Tudo é Rio - Carla Madeira",
+            "Hábitos Atômicos - James Clear",
+            "A Empregada - Freida McFadden",
+            "A Hora da Estrela - Clarice Lispector",
+            "O Homem Mais Rico da Babilônia - George S. Clason",
+            "A Psicologia Financeira - Morgan Housel"
+
     );
 
     @Cacheable(value = "books:search",

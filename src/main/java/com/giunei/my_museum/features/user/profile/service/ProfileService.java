@@ -1,14 +1,11 @@
 package com.giunei.my_museum.features.user.profile.service;
 
 import com.giunei.my_museum.core.config.SecurityUtils;
-import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.entity.Person;
 import com.giunei.my_museum.features.user.entity.User;
 import com.giunei.my_museum.features.user.follow.service.FollowService;
 import com.giunei.my_museum.features.user.profile.ProfileTheme;
-import com.giunei.my_museum.features.user.profile.dto.CompleteProfileRequest;
-import com.giunei.my_museum.features.user.profile.dto.CompleteProfileResponse;
-import com.giunei.my_museum.features.user.profile.dto.ProfileResponse;
+import com.giunei.my_museum.features.user.profile.dto.*;
 import com.giunei.my_museum.features.user.profile.entity.Profile;
 import com.giunei.my_museum.features.user.profile.repository.ProfileRepository;
 import com.giunei.my_museum.features.user.repository.PersonRepository;
@@ -17,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.Objects;
+import java.util.List;
 
 @Service
 @RequestMapping("/profile")
@@ -26,6 +23,7 @@ public class ProfileService {
 
     private final FollowService followService;
     private final PersonRepository personRepository;
+    private final ProfileRepository profileRepository;
 
     public ProfileResponse getMyProfile() {
         User user = SecurityUtils.getAuthenticatedUser();
@@ -34,14 +32,37 @@ public class ProfileService {
 
         int followers = followService.getFollowersCount(user);
 
-        return new ProfileResponse(
+        UserInfo userInfo = new UserInfo(
                 user.getId(),
-                person.getName(),
+                user.getUsername()
+        );
+
+        ProfileInfo profileInfo = new ProfileInfo(
                 profile.getProfileImageUrl(),
-                followers,
-                profile.getBio(),
+                profile.getBio()
+        );
+
+        PersonInfo personInfo = new PersonInfo(
+                person.getName(),
                 person.getNationality() != null ? person.getNationality().name() : null,
                 person.getGender() != null ? person.getGender().name() : null
+        );
+
+        SocialInfo socialInfo = new SocialInfo(followers);
+
+        // TODO: Implementar busca de highlights quando disponível
+        HighlightInfo highlightInfo = new HighlightInfo(List.of());
+
+        // TODO: Implementar gamificação quando disponível
+        GamificationInfo gamificationInfo = new GamificationInfo(1, 0);
+
+        return new ProfileResponse(
+                userInfo,
+                profileInfo,
+                personInfo,
+                socialInfo,
+                highlightInfo,
+                gamificationInfo
         );
     }
 
@@ -61,6 +82,10 @@ public class ProfileService {
         person.setNationality(request.nationality());
         person.setGender(request.gender());
         personRepository.save(person);
+
+        Profile profile = user.getProfile();
+        profile.setTheme(request.theme());
+        profileRepository.save(profile);
 
         user.setOnboardingCompleted(true);
 

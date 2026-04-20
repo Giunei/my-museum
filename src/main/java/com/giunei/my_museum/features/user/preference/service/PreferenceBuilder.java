@@ -23,7 +23,7 @@ public class PreferenceBuilder {
         return list;
     }
 
-    private void add(List<Preference> list, User user, PreferenceType type, List<String> values) {
+    private void add(List<Preference> list, User user, PreferenceType type, List<?> values) {
         if (values == null || values.isEmpty()) return;
 
         values.stream()
@@ -32,7 +32,7 @@ public class PreferenceBuilder {
                         Preference.builder()
                                 .user(user)
                                 .type(type)
-                                .value(v)
+                                .value(((Enum<?>) v).name())
                                 .build()
                 ));
     }

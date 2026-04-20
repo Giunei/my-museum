@@ -25,8 +25,6 @@ public class MuseumMapper {
         return new HighlightResponse(
                 h.getId(),
                 h.getName(),
-                Boolean.TRUE.equals(h.getFinished()),
-                Boolean.TRUE.equals(h.getPlatinumed()),
                 h.getCategory().getName()
         );
     }

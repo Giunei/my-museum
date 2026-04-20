@@ -1,6 +1,7 @@
 package com.giunei.my_museum.features.highlight;
 
 import com.giunei.my_museum.core.EntityAbstract;
+import com.giunei.my_museum.features.media.entity.UserMedia;
 import com.giunei.my_museum.features.museum.Museum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,12 +27,9 @@ public class Highlight extends EntityAbstract {
 
     private LocalTime timeSpent;
 
-    private Boolean finished;
-
-    private Boolean platinumed;
-
-    @Enumerated(EnumType.STRING)
-    private Review review;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_media_id")
+    private UserMedia userMedia;
 
     @ManyToOne
     @JoinColumn(name = "museum_id")

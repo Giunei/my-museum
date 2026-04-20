@@ -33,7 +33,6 @@ public class BookMapper {
     }
 
     public List<BookResponse> toResponseList(GoogleBooksApiResponse response) {
-
         if (response == null || response.items() == null) {
             return List.of();
         }

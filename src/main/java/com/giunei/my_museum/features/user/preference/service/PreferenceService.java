@@ -1,14 +1,15 @@
 package com.giunei.my_museum.features.user.preference.service;
 
 import com.giunei.my_museum.core.config.SecurityUtils;
+import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.entity.User;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceRequest;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceResponse;
 import com.giunei.my_museum.features.user.preference.entity.Preference;
 import com.giunei.my_museum.features.user.preference.repository.PreferenceRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,13 +20,19 @@ public class PreferenceService {
     private final PreferenceRepository repository;
     private final PreferenceBuilder builder;
     private final PreferenceMapper mapper;
+    private final UserRepository userRepository;
 
     @Transactional
     public void savePreferences(PreferenceRequest request) {
-        User user = SecurityUtils.getAuthenticatedUser();
+        Long userId = SecurityUtils.getAuthenticatedUser().getId();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow();
+
         List<Preference> preferences = builder.build(user, request);
 
         repository.saveAll(preferences);
+
         user.setOnboardingCompleted(true);
     }
 
@@ -45,5 +52,4 @@ public class PreferenceService {
 
         return mapper.toResponse(prefs);
     }
-
 }

@@ -13,9 +13,9 @@ import com.giunei.my_museum.features.highlight.repository.CategoryRepository;
 import com.giunei.my_museum.features.highlight.Highlight;
 import com.giunei.my_museum.features.highlight.dto.CategoryRequest;
 import com.giunei.my_museum.features.highlight.dto.HighlightRequest;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -85,8 +85,6 @@ public class MuseumService {
             for (HighlightRequest h : categoryRequest.highlights()) {
                 Highlight highlight = Highlight.builder()
                         .name(h.name())
-                        .finished(h.finished())
-                        .platinumed(h.platinumed())
                         .category(category)
                         .build();
 

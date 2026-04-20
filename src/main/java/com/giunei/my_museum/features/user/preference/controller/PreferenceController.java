@@ -1,10 +1,18 @@
 package com.giunei.my_museum.features.user.preference.controller;
 
+import com.giunei.my_museum.features.user.preference.dto.PreferenceOption;
+import com.giunei.my_museum.features.user.preference.dto.PreferenceOptionsResponse;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceRequest;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceResponse;
+import com.giunei.my_museum.features.user.preference.entity.BookGenre;
+import com.giunei.my_museum.features.user.preference.entity.GameGenre;
+import com.giunei.my_museum.features.user.preference.entity.MovieGenre;
 import com.giunei.my_museum.features.user.preference.service.PreferenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping("/preference")
@@ -26,5 +34,33 @@ public class PreferenceController {
     @GetMapping("/me")
     public PreferenceResponse getMyPreferences() {
         return service.getMyPreferences();
+    }
+
+    @GetMapping("/options")
+    public PreferenceOptionsResponse getOptions() {
+        return new PreferenceOptionsResponse(
+                mapBookGenres(),
+                mapMovieGenres(),
+                mapMovieGenres(),
+                mapGameGenres()
+        );
+    }
+
+    private List<PreferenceOption> mapBookGenres() {
+        return Arrays.stream(BookGenre.values())
+                .map(g -> new PreferenceOption(g.name(), g.getLabel()))
+                .toList();
+    }
+
+    private List<PreferenceOption> mapMovieGenres() {
+        return Arrays.stream(MovieGenre.values())
+                .map(g -> new PreferenceOption(g.name(), g.getLabel()))
+                .toList();
+    }
+
+    private List<PreferenceOption> mapGameGenres() {
+        return Arrays.stream(GameGenre.values())
+                .map(g -> new PreferenceOption(g.name(), g.getLabel()))
+                .toList();
     }
 }

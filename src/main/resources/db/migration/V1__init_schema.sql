@@ -54,19 +54,34 @@ CREATE TABLE category
     photo TEXT
 );
 
-CREATE TABLE highlight
+CREATE TABLE user_media
 (
     id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(255),
-    time_spent  TIME,
-    finished    BOOLEAN,
-    platinumed  BOOLEAN,
-    review      VARCHAR(50),
-    category_id INTEGER,
-    museum_id   INTEGER,
+    external_id VARCHAR(255) NOT NULL,
+    type        VARCHAR(50) NOT NULL,
+    title       VARCHAR(255) NOT NULL,
+    thumbnail   VARCHAR(255),
+    completed   BOOLEAN DEFAULT FALSE,
+    rating      INTEGER,
+    finished_at DATE,
+    user_id     BIGINT NOT NULL,
     created_at  TIMESTAMP,
     updated_at  TIMESTAMP,
+    CONSTRAINT fk_user_media_user FOREIGN KEY (user_id) REFERENCES app_user (id)
+);
 
+CREATE TABLE highlight
+(
+    id           BIGSERIAL PRIMARY KEY,
+    name         VARCHAR(255),
+    time_spent   TIME,
+    user_media_id BIGINT,
+    category_id  INTEGER,
+    museum_id    INTEGER,
+    created_at   TIMESTAMP,
+    updated_at   TIMESTAMP,
+
+    CONSTRAINT fk_highlight_user_media FOREIGN KEY (user_media_id) REFERENCES user_media (id),
     CONSTRAINT fk_highlight_category FOREIGN KEY (category_id) REFERENCES category (id),
     CONSTRAINT fk_highlight_museum FOREIGN KEY (museum_id) REFERENCES museum (id)
 );
@@ -82,6 +97,11 @@ CREATE TABLE follow
 
 CREATE INDEX idx_following ON follow(following_id);
 CREATE INDEX idx_follower ON follow(follower_id);
+
+-- Índices para performance na tabela user_media
+CREATE INDEX idx_user_media_user_id ON user_media(user_id);
+CREATE INDEX idx_user_media_type ON user_media(type);
+CREATE INDEX idx_user_media_external_id ON user_media(external_id);
 
 CREATE TABLE friendship
 (

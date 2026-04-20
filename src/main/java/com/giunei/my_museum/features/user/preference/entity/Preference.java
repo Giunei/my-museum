@@ -24,6 +24,7 @@ public class Preference {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Enumerated(EnumType.STRING)
     private PreferenceType type;
 
     private String value;
