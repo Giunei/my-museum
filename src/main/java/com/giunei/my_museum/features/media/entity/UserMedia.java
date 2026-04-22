@@ -22,16 +22,22 @@ public class UserMedia {
     private String externalId;
 
     @Enumerated(EnumType.STRING)
-    private MediaType type; // BOOK, MOVIE, GAME, SERIES
+    private MediaType type;
 
     private String title;
     private String thumbnail;
 
     private boolean completed;
 
-    private Integer rating; // 1–5
+    private Integer rating;
 
     private LocalDate finishedAt;
+
+    private boolean highlighted;
+
+    private Integer displayOrder;
+
+    private Integer pageCount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;

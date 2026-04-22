@@ -28,7 +28,8 @@ public class BookMapper {
                 authors,
                 info.description(),
                 thumbnail,
-                info.language()
+                info.language(),
+                info.pageCount()
         );
     }
 
@@ -65,7 +66,8 @@ public class BookMapper {
                             authors,
                             description,
                             thumbnail,
-                            language
+                            language,
+                            volumeInfo.pageCount()
                     );
                 })
                 .toList();

@@ -5,6 +5,7 @@ import com.giunei.my_museum.features.book.dto.BookSearchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -18,8 +19,12 @@ public class BookService {
     }
 
     public List<BookResponse> getCuratedBooks() {
-        return cacheService.getCuratedBooks()
-                .books();
+        try {
+            return cacheService.getCuratedBooks()
+                    .books();
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 }
 

@@ -25,11 +25,13 @@ public class SecurityConfig {
 
         return http
                 .cors(cors -> {
-                }) // 👈 usa o bean acima
+                })
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 🔥 ESSENCIAL
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/books/**").permitAll()
+                        .requestMatchers("/reactive/books/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

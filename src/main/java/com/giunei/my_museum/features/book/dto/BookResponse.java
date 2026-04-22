@@ -8,6 +8,7 @@ public record BookResponse(
         List<String> authors,
         String description,
         String thumbnail,
-        String language
+        String language,
+        Integer pageCount
 ) {
 }

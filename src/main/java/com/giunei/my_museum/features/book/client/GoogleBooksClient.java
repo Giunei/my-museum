@@ -9,9 +9,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.Exceptions;
+import reactor.util.retry.Retry;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
@@ -29,14 +32,18 @@ public class GoogleBooksClient {
 
         try {
             return webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/volumes")
-                            .queryParam("q", query)
-                            .queryParam("startIndex", startIndex)
-                            .queryParam("maxResults", size)
-                            .queryParam("key", apiKey)
-                            .queryParam("langRestrict", "pt")
-                            .build())
+                    .uri(uriBuilder ->
+                    {
+                        URI uri = uriBuilder
+                                .path("/volumes")
+                                .queryParam("q", query)
+                                .queryParam("startIndex", startIndex)
+                                .queryParam("maxResults", size)
+                                .queryParam("key", apiKey)
+                                .queryParam("langRestrict", "pt")
+                                .build();
+                        return uri;
+                    })
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, response ->
                             response.bodyToMono(String.class)
@@ -47,6 +54,13 @@ public class GoogleBooksClient {
                                     .map(body -> new ExternalApiException("API de livros indisponível (5xx): " + body))
                     )
                     .bodyToMono(GoogleBooksApiResponse.class)
+                    .retryWhen(
+                            Retry.backoff(3, Duration.ofMillis(200))
+                                    .filter(ExternalApiException.class::isInstance)
+                                    .onRetryExhaustedThrow((spec, signal) ->
+                                            new ExternalApiException("Falha após retries", signal.failure())
+                                    )
+                    )
                     .block(); // continua síncrono
         } catch (Exception ex) {
             Throwable cause = Exceptions.unwrap(ex);

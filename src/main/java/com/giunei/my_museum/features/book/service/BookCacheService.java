@@ -7,6 +7,8 @@ import com.giunei.my_museum.features.book.dto.BookSearchRequest;
 import com.giunei.my_museum.features.book.dto.GoogleBooksApiResponse;
 import com.giunei.my_museum.features.book.mapper.BookMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,8 @@ public class BookCacheService {
     private final GoogleBooksClient client;
     private final BookMapper mapper;
     private final BookQueryBuilder queryBuilder;
+
+    private static final Logger log = LoggerFactory.getLogger(BookCacheService.class);
 
     private static final List<String> CURATED = List.of(
             "A Metamorfose - Franz Kafka",
@@ -52,7 +56,15 @@ public class BookCacheService {
     @Cacheable(value = "books:curated")
     public BookListCache getCuratedBooks() {
         List<BookResponse> books = CURATED.stream()
-                .map(term -> client.searchBooks(term, 0, 1))
+                .map(term -> {
+                            try {
+                                return client.searchBooks(term, 0, 1);
+                            } catch (Exception e) {
+                                log.warn("Erro ao buscar: {} - {}", term, e.getMessage());
+                                return null;
+                            }
+                        }
+                )
                 .filter(result -> result != null && result.items() != null)
                 .flatMap(result -> result.items().stream())
                 .map(mapper::toResponse)

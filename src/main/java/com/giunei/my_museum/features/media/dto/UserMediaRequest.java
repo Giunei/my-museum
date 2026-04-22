@@ -11,5 +11,6 @@ public record UserMediaRequest(
         String thumbnail,
         Boolean completed,
         Integer rating,
-        LocalDate finishedAt
+        LocalDate finishedAt,
+        Integer pageCount
 ) {}

@@ -56,17 +56,20 @@ CREATE TABLE category
 
 CREATE TABLE user_media
 (
-    id          BIGSERIAL PRIMARY KEY,
-    external_id VARCHAR(255) NOT NULL,
-    type        VARCHAR(50) NOT NULL,
-    title       VARCHAR(255) NOT NULL,
-    thumbnail   VARCHAR(255),
-    completed   BOOLEAN DEFAULT FALSE,
-    rating      INTEGER,
-    finished_at DATE,
-    user_id     BIGINT NOT NULL,
-    created_at  TIMESTAMP,
-    updated_at  TIMESTAMP,
+    id              BIGSERIAL PRIMARY KEY,
+    external_id     VARCHAR(255) NOT NULL,
+    type            VARCHAR(50) NOT NULL,
+    title           VARCHAR(255) NOT NULL,
+    thumbnail       VARCHAR(255),
+    completed       BOOLEAN DEFAULT FALSE,
+    rating          INTEGER,
+    display_order   INTEGER,
+    page_count      INTEGER,
+    finished_at     DATE,
+    highlighted     BOOLEAN DEFAULT FALSE,
+    user_id         BIGINT NOT NULL,
+    created_at      TIMESTAMP,
+    updated_at      TIMESTAMP,
     CONSTRAINT fk_user_media_user FOREIGN KEY (user_id) REFERENCES app_user (id)
 );
 

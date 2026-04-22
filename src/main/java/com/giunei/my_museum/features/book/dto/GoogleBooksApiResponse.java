@@ -6,6 +6,7 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GoogleBooksApiResponse(
+        Integer totalItems,
         List<Item> items
 ) {
 
@@ -22,7 +23,8 @@ public record GoogleBooksApiResponse(
             List<String> authors,
             String description,
             ImageLinks imageLinks,
-            String language
+            String language,
+            Integer pageCount
     ) {
     }
 
