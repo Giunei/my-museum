@@ -18,20 +18,23 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secret;
 
+    @Value("${jwt.expiration-ms:3600000}")
+    private long expirationMs;
+
     public String generateToken(User user) {
+        Date now = new Date();
+        Date expirationDate = new Date(now.getTime() + expirationMs);
+
         return Jwts.builder()
                 .subject(user.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1h
+                .issuedAt(now)
+                .expiration(expirationDate)
                 .signWith(getSigningKey())
                 .compact();
     }
 
     public String extractUsername(String token) {
-        return getParser()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public boolean isTokenValid(String token, User user) {
@@ -44,14 +47,10 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        return parseClaims(token).getExpiration().before(new Date());
     }
 
-    private Date extractExpiration(String token) {
-        return extractAllClaims(token).getExpiration();
-    }
-
-    private Claims extractAllClaims(String token) {
+    private Claims parseClaims(String token) {
         return getParser()
                 .parseSignedClaims(token)
                 .getPayload();

@@ -3,7 +3,10 @@ package com.giunei.my_museum.features.book.controller;
 import com.giunei.my_museum.features.book.dto.BookResponse;
 import com.giunei.my_museum.features.book.dto.BookSearchRequest;
 import com.giunei.my_museum.features.book.service.BookService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/books")
 @RequiredArgsConstructor
+@Validated
 public class BookController {
 
     private final BookService service;
@@ -22,8 +26,8 @@ public class BookController {
     public List<BookResponse> search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) List<String> genres,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(20) int size
     ) {
         BookSearchRequest request = new BookSearchRequest(query, genres, page, size);
         return service.search(request);

@@ -6,13 +6,12 @@ import com.giunei.my_museum.exceptions.NotFoundException;
 import com.giunei.my_museum.features.museum.dto.AddHighlightsRequest;
 import com.giunei.my_museum.features.museum.dto.CreateMuseumRequest;
 import com.giunei.my_museum.features.museum.dto.MuseumResponse;
-import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.entity.User;
 import com.giunei.my_museum.features.highlight.Category;
-import com.giunei.my_museum.features.highlight.repository.CategoryRepository;
 import com.giunei.my_museum.features.highlight.Highlight;
 import com.giunei.my_museum.features.highlight.dto.CategoryRequest;
 import com.giunei.my_museum.features.highlight.dto.HighlightRequest;
+import com.giunei.my_museum.features.highlight.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,19 +24,13 @@ public class MuseumService {
 
     private final MuseumRepository repo;
     private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
 
     @Transactional
-    public MuseumResponse save(CreateMuseumRequest request) {
+    public MuseumResponse save(CreateMuseumRequest ignoredRequest) {
+        User user = SecurityUtils.getAuthenticatedUser();
 
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new NotFoundException("User not found"));
-
-        Museum museum = Museum.builder()
-                .user(user)
-                .build();
-
-        repo.save(museum);
+        Museum museum = repo.findByUser(user)
+                .orElseGet(() -> repo.save(Museum.builder().user(user).build()));
 
         return MuseumMapper.toResponse(museum);
     }

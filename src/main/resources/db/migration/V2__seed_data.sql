@@ -5,8 +5,8 @@
 INSERT INTO app_user (id, username, email, password, created_at, updated_at)
 VALUES (nextval('app_user_id_seq'),
         'admin',
-        'pmjgiunei@gmail.com',
-        '$2a$12$YMcFQbatT633bElelHMoz.oWTCu.Jnj4TaYz2f8X5Iy.byNJy1.NW', -- senha: admin
+        'admin@example.com',
+        '$2a$12$YMcFQbatT633bElelHMoz.oWTCu.Jnj4TaYz2f8X5Iy.byNJy1.NW',
         NOW(),
         NOW());
 

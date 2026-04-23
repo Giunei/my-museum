@@ -1,6 +1,9 @@
 package com.giunei.my_museum.features.media.service;
 
 import com.giunei.my_museum.core.config.SecurityUtils;
+import com.giunei.my_museum.exceptions.HighlightLimitExceededException;
+import com.giunei.my_museum.exceptions.InvalidMediaRatingException;
+import com.giunei.my_museum.exceptions.NotFoundException;
 import com.giunei.my_museum.features.media.dto.UpdateUserMediaRequest;
 import com.giunei.my_museum.features.media.dto.UserMediaRequest;
 import com.giunei.my_museum.features.media.dto.UserMediaResponse;
@@ -16,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -46,11 +50,10 @@ public class UserMediaService {
         User user = SecurityUtils.getAuthenticatedUser();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("finishedAt").descending());
-
         Page<UserMedia> result;
 
         if (type != null && completed != null) {
-            result = repository.findByUserAndTypeAndCompletedTrue(user, type, pageable);
+            result = repository.findByUserAndTypeAndCompleted(user, type, completed, pageable);
         } else if (type != null) {
             result = repository.findByUserAndType(user, type, pageable);
         } else {
@@ -60,8 +63,11 @@ public class UserMediaService {
         return result.map(this::toResponse);
     }
 
+    @Transactional
     public void delete(Long id) {
-        repository.deleteById(id);
+        User user = SecurityUtils.getAuthenticatedUser();
+        UserMedia media = findUserMediaById(id, user);
+        repository.delete(media);
     }
 
     public List<UserMediaResponse> getHighlighted(MediaType type) {
@@ -71,7 +77,7 @@ public class UserMediaService {
                         type
                 )
                 .stream()
-                .map(a -> toResponse(a))
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -84,9 +90,7 @@ public class UserMediaService {
         int order = 0;
 
         for (Long id : ids) {
-            UserMedia media = repository.findByIdAndUser(id, user)
-                    .orElseThrow();
-
+            UserMedia media = findUserMediaById(id, user);
             media.setHighlighted(true);
             media.setDisplayOrder(order++);
         }
@@ -95,53 +99,76 @@ public class UserMediaService {
     @Transactional
     public UserMediaResponse updateMedia(Long id, UpdateUserMediaRequest request) {
         User user = SecurityUtils.getAuthenticatedUser();
+        UserMedia media = findUserMediaById(id, user);
 
-        UserMedia media = repository.findByIdAndUser(id, user)
-                .orElseThrow();
-
-        // 📚 rating
-        if (request.rating() != null) {
-            if (request.rating() < 0 || request.rating() > 5) {
-                throw new IllegalArgumentException("Rating deve ser entre 0 e 5");
-            }
-            media.setRating(request.rating());
-        }
-
-        // 📅 finishedAt
-        if (request.finishedAt() != null) {
-            media.setFinishedAt(request.finishedAt());
-            media.setCompleted(true);
-        }
-
-        // 🎨 highlighted
-        if (request.highlighted() != null) {
-
-            if (request.highlighted()) {
-                validateHighlightLimit(user);
-            }
-
-            media.setHighlighted(request.highlighted());
-
-            // se acabou de virar highlighted e não tem ordem → joga pro final
-            if (request.highlighted() && media.getDisplayOrder() == null) {
-                Integer nextOrder = repository.getNextDisplayOrder(user);
-                media.setDisplayOrder(nextOrder);
-            }
-
-            // se removeu do perfil → limpa ordem
-            if (!request.highlighted()) {
-                media.setDisplayOrder(null);
-            }
-        }
+        applyRatingUpdate(media, request.rating());
+        applyFinishedAtUpdate(media, request.finishedAt());
+        applyHighlightUpdate(media, user, request.highlighted());
 
         return toResponse(media);
+    }
+
+    private void applyRatingUpdate(UserMedia media, Integer rating) {
+        if (rating == null) {
+            return;
+        }
+
+        if (rating < 0 || rating > 5) {
+            throw new InvalidMediaRatingException("Rating deve ser entre 0 e 5");
+        }
+
+        media.setRating(rating);
+    }
+
+    private void applyFinishedAtUpdate(UserMedia media, LocalDate finishedAt) {
+        if (finishedAt == null) {
+            return;
+        }
+
+        media.setFinishedAt(finishedAt);
+        media.setCompleted(true);
+    }
+
+    private void applyHighlightUpdate(UserMedia media, User user, Boolean highlightedValue) {
+        if (highlightedValue == null) {
+            return;
+        }
+
+        boolean highlighted = highlightedValue;
+
+        if (highlighted) {
+            validateHighlightLimit(user);
+        }
+
+        media.setHighlighted(highlighted);
+
+        if (highlighted) {
+            assignDisplayOrderIfMissing(media, user);
+            return;
+        }
+
+        media.setDisplayOrder(null);
+    }
+
+    private void assignDisplayOrderIfMissing(UserMedia media, User user) {
+        if (media.getDisplayOrder() != null) {
+            return;
+        }
+
+        Integer nextOrder = repository.getNextDisplayOrder(user);
+        media.setDisplayOrder(nextOrder);
+    }
+
+    private UserMedia findUserMediaById(Long id, User user) {
+        return repository.findByIdAndUser(id, user)
+                .orElseThrow(() -> new NotFoundException("Mídia não encontrada"));
     }
 
     private void validateHighlightLimit(User user) {
         long count = repository.countByUserAndHighlightedTrue(user);
 
         if (count >= 6) {
-            throw new IllegalStateException("Máximo de 6 itens no perfil");
+            throw new HighlightLimitExceededException("Máximo de 6 itens no perfil");
         }
     }
 

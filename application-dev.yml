@@ -55,4 +55,11 @@ app:
 google:
   books:
     api:
-      key: AIzaSyChmTp6YKikIkz1koq_J0YU0hc_Nh8wtHA
+      key: ${GOOGLE_BOOKS_API}
+      timeout-seconds: 4
+      curated:
+        concurrency: 4
+      retry:
+        max-attempts: 3
+        first-backoff-ms: 200
+        max-backoff-seconds: 2

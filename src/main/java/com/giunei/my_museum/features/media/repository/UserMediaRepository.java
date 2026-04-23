@@ -18,7 +18,7 @@ public interface UserMediaRepository extends JpaRepository<UserMedia, Long> {
 
     Page<UserMedia> findByUserAndType(User user, MediaType type, Pageable pageable);
 
-    Page<UserMedia> findByUserAndTypeAndCompletedTrue(User user, MediaType type, Pageable pageable);
+    Page<UserMedia> findByUserAndTypeAndCompleted(User user, MediaType type, boolean completed, Pageable pageable);
 
     @Modifying
     @Query("update UserMedia u set u.highlighted = false where u.user = :user")

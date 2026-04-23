@@ -1,8 +1,9 @@
 package com.giunei.my_museum.features.auth.service;
 
+import com.giunei.my_museum.exceptions.UsernameAlreadyExistsException;
 import com.giunei.my_museum.features.auth.dto.RegisterRequest;
-import com.giunei.my_museum.features.user.entity.User;
 import com.giunei.my_museum.features.user.UserRepository;
+import com.giunei.my_museum.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,26 +20,23 @@ public class UserRegistrationService {
 
     @Transactional
     public User registerUser(RegisterRequest request) {
-        // Verificar se username já existe
         if (userRepository.existsByUsername(request.username())) {
-            throw new RuntimeException("Username já existe");
+            throw new UsernameAlreadyExistsException("Username já existe");
         }
 
-        // Criar usuário
+        if (userRepository.existsByEmail(request.email())) {
+            throw new UsernameAlreadyExistsException("Email já cadastrado");
+        }
+
         User user = User.builder()
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
                 .email(request.email())
                 .build();
-        userRepository.save(user);
 
-        // Criar profile e person
+        userRepository.save(user);
         userProfileService.createProfileForUser(user);
-        
-        // Criar token de verificação de email apenas se email fornecido
-        if (request.email() != null && !request.email().trim().isEmpty()) {
-            emailVerificationService.createEmailVerificationToken(user);
-        }
+        emailVerificationService.createEmailVerificationToken(user);
 
         return user;
     }

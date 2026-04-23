@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: my_museum
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:

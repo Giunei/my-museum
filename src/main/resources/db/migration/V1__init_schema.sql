@@ -41,7 +41,7 @@ CREATE TABLE profile
 CREATE TABLE museum
 (
     id         BIGSERIAL PRIMARY KEY,
-    user_id    INTEGER,
+    user_id    INTEGER UNIQUE,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     CONSTRAINT fk_museum_user FOREIGN KEY (user_id) REFERENCES app_user (id)
@@ -102,9 +102,11 @@ CREATE INDEX idx_following ON follow(following_id);
 CREATE INDEX idx_follower ON follow(follower_id);
 
 -- Índices para performance na tabela user_media
+CREATE INDEX idx_museum_user_id ON museum(user_id);
 CREATE INDEX idx_user_media_user_id ON user_media(user_id);
 CREATE INDEX idx_user_media_type ON user_media(type);
 CREATE INDEX idx_user_media_external_id ON user_media(external_id);
+CREATE INDEX idx_user_media_user_type_finished ON user_media(user_id, type, finished_at DESC);
 
 CREATE TABLE friendship
 (

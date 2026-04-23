@@ -3,4 +3,5 @@ spring:
     active: dev
 
 jwt:
-  secret: q83KJHskdjfh8234KJHsdkjh2384KJHsdkjh2384KJHsd=
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:3600000}

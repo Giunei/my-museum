@@ -1,6 +1,8 @@
 package com.giunei.my_museum.core.service;
 
 import com.cloudinary.Cloudinary;
+import com.giunei.my_museum.exceptions.FileUploadException;
+import com.giunei.my_museum.exceptions.InvalidFileUploadException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,32 +14,43 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CloudinaryService {
 
+    private static final long MAX_FILE_SIZE_BYTES = 2L * 1024 * 1024;
+
     private final Cloudinary cloudinary;
 
     public String upload(MultipartFile file) {
         validateImage(file);
+
         try {
-            Map uploadResult = cloudinary.uploader().upload(
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     Map.of("folder", "my-museum/profile-images")
             );
-            return uploadResult.get("secure_url").toString();
+
+            Object secureUrl = uploadResult.get("secure_url");
+            if (secureUrl == null) {
+                throw new FileUploadException("Resposta inválida do provedor de upload");
+            }
+
+            return secureUrl.toString();
         } catch (IOException e) {
-            throw new RuntimeException("Erro ao fazer upload da imagem");
+            throw new FileUploadException("Erro ao fazer upload da imagem", e);
         }
     }
 
     private void validateImage(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new RuntimeException("Arquivo vazio");
+        if (file == null || file.isEmpty()) {
+            throw new InvalidFileUploadException("Arquivo vazio");
         }
 
-        if (!file.getContentType().startsWith("image/")) {
-            throw new RuntimeException("Arquivo deve ser uma imagem");
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new InvalidFileUploadException("Arquivo deve ser uma imagem");
         }
 
-        if (file.getSize() > 2 * 1024 * 1024) { // 2MB
-            throw new RuntimeException("Imagem muito grande (máx 2MB)");
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            throw new InvalidFileUploadException("Imagem muito grande (máx 2MB)");
         }
     }
 }

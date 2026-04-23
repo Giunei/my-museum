@@ -1,5 +1,7 @@
 package com.giunei.my_museum.features.user.service;
 
+import com.giunei.my_museum.core.config.SecurityUtils;
+import com.giunei.my_museum.exceptions.AccessDeniedException;
 import com.giunei.my_museum.exceptions.NotFoundException;
 import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.dto.UserReponse;
@@ -18,6 +20,12 @@ public class UserService {
     }
 
     public UserReponse findById(Long id) {
+        User authenticatedUser = SecurityUtils.getAuthenticatedUser();
+
+        if (!authenticatedUser.getId().equals(id)) {
+            throw new AccessDeniedException("Access denied");
+        }
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
