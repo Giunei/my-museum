@@ -1,0 +1,17 @@
+package com.giunei.my_museum.features.book.recommendation.dto;
+
+import com.giunei.my_museum.features.book.catalog.entity.BookEditorialCategory;
+import com.giunei.my_museum.features.book.dto.BookResponse;
+
+import java.util.Set;
+
+public record BookRecommendationCardResponse(
+        Long catalogId,
+        String title,
+        String author,
+        Set<String> genres,
+        BookEditorialCategory editorialCategory,
+        int score,
+        BookResponse book
+) {
+}
