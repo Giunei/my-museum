@@ -4,6 +4,7 @@ import com.giunei.my_museum.features.book.client.GoogleBooksClient;
 import com.giunei.my_museum.features.book.dto.BookListCache;
 import com.giunei.my_museum.features.book.dto.BookResponse;
 import com.giunei.my_museum.features.book.dto.BookSearchRequest;
+import com.giunei.my_museum.features.book.dto.BookSearchSort;
 import com.giunei.my_museum.features.book.dto.GoogleBooksApiResponse;
 import com.giunei.my_museum.features.book.mapper.BookMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Comparator;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -39,18 +42,29 @@ public class BookCacheService {
     );
 
     @Cacheable(value = "books:search",
-            key = "#request.query + '-' + #request.genres + '-' + #request.page + '-' + #request.size")
+            key = "#request.query() + '-' + #request.title() + '-' + #request.author() + '-' + #request.language() + '-' + #request.sort() + '-' + #request.genres() + '-' + #request.page() + '-' + #request.size()")
     public List<BookResponse> search(BookSearchRequest request) {
         String query = queryBuilder.build(request);
 
         int page = request.page();
         int size = request.size() != 0 ? Math.min(request.size(), 20) : 10;
+        String language = queryBuilder.normalizeLanguage(request.language());
+        String orderBy = request.sort() == null ? "relevance" : request.sort().apiOrderBy();
 
-        GoogleBooksApiResponse response = client.searchBooks(query, page, size);
+        GoogleBooksApiResponse response = client.searchBooks(query, page, size, language, orderBy);
 
-        return response.items() != null ? response.items().stream()
+        List<BookResponse> books = response.items() != null ? response.items().stream()
                 .map(mapper::toResponse)
+                .filter(Objects::nonNull)
                 .toList() : List.of();
+
+        if (request.sort() == BookSearchSort.POPULAR) {
+            books = books.stream()
+                    .sorted(popularityComparator())
+                    .toList();
+        }
+
+        return books;
     }
 
     @Cacheable(value = "books:curated")
@@ -71,5 +85,12 @@ public class BookCacheService {
                 .toList();
 
         return new BookListCache(books);
+    }
+
+    private Comparator<BookResponse> popularityComparator() {
+        return Comparator
+                .comparing((BookResponse book) -> book.ratingsCount() == null ? 0 : book.ratingsCount())
+                .thenComparing(book -> book.averageRating() == null ? 0.0 : book.averageRating())
+                .reversed();
     }
 }

@@ -1,5 +1,6 @@
 package com.giunei.my_museum.features.media.controller;
 
+import com.giunei.my_museum.features.media.dto.UpdateMediaResult;
 import com.giunei.my_museum.features.media.dto.UpdateUserMediaRequest;
 import com.giunei.my_museum.features.media.dto.UserMediaRequest;
 import com.giunei.my_museum.features.media.dto.UserMediaResponse;
@@ -47,6 +48,25 @@ public class UserMediaController {
         return service.findAll(page, size, type, completed);
     }
 
+    @GetMapping("/collection/{collectionId}")
+    public Page<UserMediaResponse> findByCollection(
+            @PathVariable Long collectionId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        return service.findByCollection(collectionId, page, size);
+    }
+
+    @PostMapping("/{id}/collection/{collectionId}")
+    public void addToCollection(@PathVariable Long id, @PathVariable Long collectionId) {
+        service.addToCollection(id, collectionId);
+    }
+
+    @DeleteMapping("/{id}/collection/{collectionId}")
+    public void removeFromCollection(@PathVariable Long id, @PathVariable Long collectionId) {
+        service.removeFromCollection(id, collectionId);
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.delete(id);
@@ -59,13 +79,20 @@ public class UserMediaController {
         return service.getHighlighted(type);
     }
 
+    @GetMapping("/wishlist")
+    public List<UserMediaResponse> getWishlist(
+            @RequestParam MediaType type
+    ) {
+        return service.getWishlist(type);
+    }
+
     @PutMapping("/highlighted/order")
     public void updateOrder(@RequestBody List<Long> ids) {
         service.updateOrder(ids);
     }
 
     @PatchMapping("/{id}")
-    public UserMediaResponse updateMedia(
+    public UpdateMediaResult updateMedia(
             @PathVariable Long id,
             @RequestBody @Valid UpdateUserMediaRequest request
     ) {

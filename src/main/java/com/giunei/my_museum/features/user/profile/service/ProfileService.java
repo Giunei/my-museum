@@ -39,13 +39,15 @@ public class ProfileService {
 
         ProfileInfo profileInfo = new ProfileInfo(
                 profile.getProfileImageUrl(),
-                profile.getBio()
+                profile.getBio(),
+                profile.getTheme()
         );
 
         PersonInfo personInfo = new PersonInfo(
                 person.getName(),
                 person.getNationality() != null ? person.getNationality().name() : null,
-                person.getGender() != null ? person.getGender().name() : null
+                person.getGender() != null ? person.getGender().name() : null,
+                person.getBirthDate()
         );
 
         SocialInfo socialInfo = new SocialInfo(followers);
@@ -53,16 +55,12 @@ public class ProfileService {
         // TODO: Implementar busca de highlights quando disponível
         HighlightInfo highlightInfo = new HighlightInfo(List.of());
 
-        // TODO: Implementar gamificação quando disponível
-        GamificationInfo gamificationInfo = new GamificationInfo(1, 0);
-
         return new ProfileResponse(
                 userInfo,
                 profileInfo,
                 personInfo,
                 socialInfo,
-                highlightInfo,
-                gamificationInfo
+                highlightInfo
         );
     }
 
@@ -81,10 +79,11 @@ public class ProfileService {
         person.setName(request.name());
         person.setNationality(request.nationality());
         person.setGender(request.gender());
+        person.setBirthDate(request.birthDate());
         personRepository.save(person);
 
         Profile profile = user.getProfile();
-        profile.setTheme(request.theme());
+        profile.setBio(request.bio());
         profileRepository.save(profile);
 
         user.setOnboardingCompleted(true);

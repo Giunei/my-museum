@@ -4,6 +4,11 @@ import com.giunei.my_museum.features.book.client.ReactiveGoogleBooksClient;
 import com.giunei.my_museum.features.book.dto.BookPageResponse;
 import com.giunei.my_museum.features.book.dto.BookResponse;
 import com.giunei.my_museum.features.book.mapper.BookMapper;
+import com.giunei.my_museum.core.config.SecurityUtils;
+import com.giunei.my_museum.features.media.dto.UserCollectionInfo;
+import com.giunei.my_museum.features.media.entity.UserMedia;
+import com.giunei.my_museum.features.media.repository.UserMediaRepository;
+import com.giunei.my_museum.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +29,7 @@ public class ReactiveBookService {
 
     private final ReactiveGoogleBooksClient client;
     private final BookMapper mapper;
+    private final UserMediaRepository userMediaRepository;
 
     @Value("${google.books.api.curated.concurrency:4}")
     private int curatedConcurrency;
@@ -43,30 +49,72 @@ public class ReactiveBookService {
     );
 
     public Flux<BookResponse> getCuratedBooks() {
-        return Flux.fromIterable(CURATED)
-                // Executa em paralelo com limite para evitar burst excessivo.
-                .flatMap(term ->
-                                client.searchBooks(term, 0, 1)
-                                        .onErrorResume(e -> {
-                                            log.warn("Failed to fetch curated book for term='{}': {}", term, e.toString());
-                                            return Mono.empty();
-                                        })
-                                        .flatMapMany(response -> response.items() == null
-                                                ? Flux.empty()
-                                                : Flux.fromIterable(response.items()))
-                                        .map(item -> {
-                                            try {
-                                                return mapper.toResponse(item);
-                                            } catch (Exception e) {
-                                                log.warn("Failed to map Google Books item for term='{}': {}", term, e.toString());
-                                                return null;
-                                            }
-                                        })
-                                        .filter(Objects::nonNull),
-                        curatedConcurrency
-                )
-                .onErrorContinue((e, obj) ->
-                        log.warn("Ignoring stream error for obj='{}': {}", obj, e.toString()));
+        try {
+            User user = SecurityUtils.getAuthenticatedUser();
+            return Flux.fromIterable(CURATED)
+                    // Executa em paralelo com limite para evitar burst excessivo.
+                    .flatMap(term ->
+                                    client.searchBooks(term, 0, 1)
+                                            .onErrorResume(e -> {
+                                                log.warn("Failed to fetch curated book for term='{}': {}", term, e.toString());
+                                                return Mono.empty();
+                                            })
+                                            .flatMapMany(response -> response.items() == null
+                                                    ? Flux.empty()
+                                                    : Flux.fromIterable(response.items()))
+                                            .map(item -> {
+                                                try {
+                                                    UserCollectionInfo collectionInfo = getUserCollectionInfo(user, item.id());
+                                                    return mapper.toResponse(item, collectionInfo);
+                                                } catch (Exception e) {
+                                                    log.warn("Failed to map Google Books item for term='{}': {}", term, e.toString());
+                                                    return null;
+                                                }
+                                            })
+                                            .filter(Objects::nonNull),
+                            curatedConcurrency
+                    )
+                    .onErrorContinue((e, obj) ->
+                            log.warn("Ignoring stream error for obj='{}': {}", obj, e.toString()));
+        } catch (Exception e) {
+            // User not authenticated, return without collection info
+            return Flux.fromIterable(CURATED)
+                    .flatMap(term ->
+                                    client.searchBooks(term, 0, 1)
+                                            .onErrorResume(e2 -> {
+                                                log.warn("Failed to fetch curated book for term='{}': {}", term, e2.toString());
+                                                return Mono.empty();
+                                            })
+                                            .flatMapMany(response -> response.items() == null
+                                                    ? Flux.empty()
+                                                    : Flux.fromIterable(response.items()))
+                                            .map(item -> {
+                                                try {
+                                                    return mapper.toResponse(item, UserCollectionInfo.notInCollection());
+                                                } catch (Exception e2) {
+                                                    log.warn("Failed to map Google Books item for term='{}': {}", term, e2.toString());
+                                                    return null;
+                                                }
+                                            })
+                                            .filter(Objects::nonNull),
+                            curatedConcurrency
+                    )
+                    .onErrorContinue((e2, obj) ->
+                            log.warn("Ignoring stream error for obj='{}': {}", obj, e2.toString()));
+        }
+    }
+
+    private UserCollectionInfo getUserCollectionInfo(User user, String externalId) {
+        return userMediaRepository.findByUserAndExternalId(user, externalId)
+                .map(media -> new UserCollectionInfo(
+                        true,
+                        media.getStatus(),
+                        media.getRating(),
+                        media.getFinishedAt(),
+                        media.getCurrentSeason(),
+                        media.getCurrentEpisode()
+                ))
+                .orElse(UserCollectionInfo.notInCollection());
     }
 
     @Cacheable(value = "books:search",

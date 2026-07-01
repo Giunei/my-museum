@@ -23,8 +23,12 @@ public record GoogleBooksApiResponse(
             List<String> authors,
             String description,
             ImageLinks imageLinks,
+            String infoLink,
+            String previewLink,
             String language,
-            Integer pageCount
+            Integer pageCount,
+            Double averageRating,
+            Integer ratingsCount
     ) {
     }
 

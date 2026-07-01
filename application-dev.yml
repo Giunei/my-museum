@@ -5,7 +5,6 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
-  
   jpa:
     hibernate:
       ddl-auto: none
@@ -21,10 +20,6 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     validate-on-migrate: true
-
-  logging:
-    level:
-      org.flywaydb: DEBUG
 
   data:
     redis:
@@ -43,6 +38,10 @@ spring:
           starttls:
             enable: true
 
+logging:
+  level:
+    org.flywaydb: DEBUG
+
 cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME}
     api-key: ${CLOUDINARY_API_KEY}
@@ -55,7 +54,7 @@ app:
 google:
   books:
     api:
-      key: ${GOOGLE_BOOKS_API}
+      key: ${GOOGLE_BOOKS_API_KEY}
       timeout-seconds: 4
       curated:
         concurrency: 4
@@ -63,3 +62,21 @@ google:
         max-attempts: 3
         first-backoff-ms: 200
         max-backoff-seconds: 2
+
+tmdb:
+  api:
+    token: ${TMDB_API_TOKEN}
+
+steam:
+  api:
+    key: ${STEAM_API_KEY}
+  realm: http://localhost:8080
+
+rawg:
+  api:
+    key: ${RAWG_API_KEY}
+
+riot:
+  api:
+    key: ${RIOT_API_KEY}
+

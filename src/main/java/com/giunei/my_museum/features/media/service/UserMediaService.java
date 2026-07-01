@@ -1,14 +1,21 @@
 package com.giunei.my_museum.features.media.service;
 
 import com.giunei.my_museum.core.config.SecurityUtils;
+import com.giunei.my_museum.exceptions.DuplicateMediaException;
 import com.giunei.my_museum.exceptions.HighlightLimitExceededException;
 import com.giunei.my_museum.exceptions.InvalidMediaRatingException;
 import com.giunei.my_museum.exceptions.NotFoundException;
+import com.giunei.my_museum.features.achievement.service.AchievementService;
+import com.giunei.my_museum.features.achievement.service.UserGoalService;
+import com.giunei.my_museum.features.media.dto.UpdateMediaResult;
 import com.giunei.my_museum.features.media.dto.UpdateUserMediaRequest;
 import com.giunei.my_museum.features.media.dto.UserMediaRequest;
 import com.giunei.my_museum.features.media.dto.UserMediaResponse;
+import com.giunei.my_museum.features.media.entity.MediaCollection;
 import com.giunei.my_museum.features.media.entity.UserMedia;
 import com.giunei.my_museum.features.media.enums.MediaType;
+import com.giunei.my_museum.features.media.enums.MediaStatus;
+import com.giunei.my_museum.features.media.repository.MediaCollectionRepository;
 import com.giunei.my_museum.features.media.repository.UserMediaRepository;
 import com.giunei.my_museum.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -20,30 +27,61 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class UserMediaService {
 
     private final UserMediaRepository repository;
+    private final UserGoalService goalService;
+    private final AchievementService achievementService;
+    private final MediaCollectionRepository collectionRepository;
 
+    @Transactional
     public UserMediaResponse create(UserMediaRequest request) {
         User user = SecurityUtils.getAuthenticatedUser();
+
+        if (repository.existsByExternalIdAndUser(request.externalId(), user)) {
+            throw new DuplicateMediaException("Você já adicionou este item à sua biblioteca");
+        }
+
+        Set<MediaCollection> collections = new HashSet<>();
+        if (request.collectionIds() != null && !request.collectionIds().isEmpty()) {
+            for (Long collectionId : request.collectionIds()) {
+                MediaCollection collection = collectionRepository.findById(collectionId)
+                        .orElseThrow(() -> new NotFoundException("Coleção não encontrada"));
+                if (!collection.getUser().equals(user) || !collection.getType().equals(request.type())) {
+                    throw new IllegalArgumentException("Coleção inválida para este tipo de mídia");
+                }
+                collections.add(collection);
+            }
+        }
 
         UserMedia media = UserMedia.builder()
                 .externalId(request.externalId())
                 .type(request.type())
                 .title(request.title())
                 .thumbnail(request.thumbnail())
-                .completed(Boolean.TRUE.equals(request.completed()))
+                // Do not mark as completed just because the client passed `completed` without a finishedAt.
+                // Only consider it completed on creation when a finishedAt date was provided.
+                .completed(request.finishedAt() != null)
                 .rating(request.rating())
                 .finishedAt(request.finishedAt())
                 .user(user)
                 .pageCount(request.pageCount())
+                .status(request.status() != null ? request.status() : MediaStatus.PENDING)
+                .currentSeason(request.currentSeason())
+                .currentEpisode(request.currentEpisode())
+                .author(request.author())
+                .collections(collections)
                 .build();
 
-        return toResponse(repository.save(media));
+        media = repository.saveAndFlush(media);
+
+        applyPostSaveBusinessRules(user, media, null, null, false);
+
+        return toResponse(media);
     }
 
     public Page<UserMediaResponse> findAll(int page, int size, MediaType type, Boolean completed) {
@@ -63,6 +101,50 @@ public class UserMediaService {
         return result.map(this::toResponse);
     }
 
+    public Page<UserMediaResponse> findByCollection(Long collectionId, int page, int size) {
+        User user = SecurityUtils.getAuthenticatedUser();
+        MediaCollection collection = collectionRepository.findById(collectionId)
+                .orElseThrow(() -> new NotFoundException("Coleção não encontrada"));
+
+        if (!collection.getUser().equals(user)) {
+            throw new IllegalArgumentException("Coleção não pertence ao usuário");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("finishedAt").descending());
+        Page<UserMedia> result = repository.findByUserAndCollection(user, collection, pageable);
+
+        return result.map(this::toResponse);
+    }
+
+    @Transactional
+    public void addToCollection(Long id, Long collectionId) {
+        User user = SecurityUtils.getAuthenticatedUser();
+        UserMedia media = findUserMediaById(id, user);
+        MediaCollection collection = collectionRepository.findById(collectionId)
+                .orElseThrow(() -> new NotFoundException("Coleção não encontrada"));
+        if (!collection.getUser().equals(user)) {
+            throw new IllegalArgumentException("Coleção não pertence ao usuário");
+        }
+        if (!collection.getType().equals(media.getType())) {
+            throw new IllegalArgumentException("Coleção inválida para este tipo de mídia");
+        }
+        media.getCollections().add(collection);
+        repository.save(media);
+    }
+
+    @Transactional
+    public void removeFromCollection(Long id, Long collectionId) {
+        User user = SecurityUtils.getAuthenticatedUser();
+        UserMedia media = findUserMediaById(id, user);
+        MediaCollection collection = collectionRepository.findById(collectionId)
+                .orElseThrow(() -> new NotFoundException("Coleção não encontrada"));
+        if (!collection.getUser().equals(user)) {
+            throw new IllegalArgumentException("Coleção não pertence ao usuário");
+        }
+        media.getCollections().remove(collection);
+        repository.save(media);
+    }
+
     @Transactional
     public void delete(Long id) {
         User user = SecurityUtils.getAuthenticatedUser();
@@ -71,14 +153,41 @@ public class UserMediaService {
     }
 
     public List<UserMediaResponse> getHighlighted(MediaType type) {
-        return repository
-                .findTop6ByUserAndTypeAndHighlightedTrueOrderByDisplayOrderAsc(
-                        SecurityUtils.getAuthenticatedUser(),
-                        type
-                )
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        try {
+            User user = SecurityUtils.getAuthenticatedUser();
+            int limit = getHighlightLimit(type);
+            Pageable pageable = PageRequest.of(0, limit, Sort.by("displayOrder").ascending());
+            List<UserMedia> highlighted = repository
+                    .findByUserAndTypeAndHighlightedTrueOrderByDisplayOrderAsc(user, type, pageable);
+            return highlighted
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
+        } catch (Exception e) {
+            // Log error and return empty list instead of throwing
+            System.err.println("Error loading highlighted media: " + e.getMessage());
+            e.printStackTrace();
+            return List.of();
+        }
+    }
+
+    public List<UserMediaResponse> getWishlist(MediaType type) {
+        try {
+            return repository
+                    .findByUserAndTypeAndStatus(
+                            SecurityUtils.getAuthenticatedUser(),
+                            type,
+                            MediaStatus.PENDING,
+                            org.springframework.data.domain.Pageable.unpaged()
+                    )
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
+        } catch (Exception e) {
+            System.err.println("Error loading wishlist: " + e.getMessage());
+            e.printStackTrace();
+            return List.of();
+        }
     }
 
     @Transactional
@@ -97,15 +206,151 @@ public class UserMediaService {
     }
 
     @Transactional
-    public UserMediaResponse updateMedia(Long id, UpdateUserMediaRequest request) {
+    public UpdateMediaResult updateMedia(Long id, UpdateUserMediaRequest request) {
         User user = SecurityUtils.getAuthenticatedUser();
         UserMedia media = findUserMediaById(id, user);
 
+        // capture previous values
+        LocalDate prevFinishedAt = media.getFinishedAt();
+        Integer prevRating = media.getRating();
+        boolean explicitHighlightProvided = request.highlighted() != null;
+
+        // apply requested changes
         applyRatingUpdate(media, request.rating());
         applyFinishedAtUpdate(media, request.finishedAt());
+
+        // update series progress
+        if (request.currentSeason() != null) {
+            media.setCurrentSeason(request.currentSeason());
+        }
+        if (request.currentEpisode() != null) {
+            media.setCurrentEpisode(request.currentEpisode());
+        }
+
+        // update collections
+        if (request.collectionIds() != null) {
+            Set<MediaCollection> collections = new HashSet<>();
+            for (Long collectionId : request.collectionIds()) {
+                MediaCollection collection = collectionRepository.findById(collectionId)
+                        .orElseThrow(() -> new NotFoundException("Coleção não encontrada"));
+                if (!collection.getUser().equals(user) || !collection.getType().equals(media.getType())) {
+                    throw new IllegalArgumentException("Coleção inválida para este tipo de mídia");
+                }
+                collections.add(collection);
+            }
+            media.setCollections(collections);
+        }
+
+        List<String> awarded = applyPostSaveBusinessRules(user, media, prevFinishedAt, prevRating, explicitHighlightProvided);
+
         applyHighlightUpdate(media, user, request.highlighted());
 
-        return toResponse(media);
+        return new UpdateMediaResult(toResponse(media), awarded);
+    }
+
+    private List<String> applyPostSaveBusinessRules(User user,
+                                                    UserMedia media,
+                                                    LocalDate prevFinishedAt,
+                                                    Integer prevRating,
+                                                    boolean explicitHighlightProvided) {
+        List<String> awarded = new ArrayList<>();
+        awarded.addAll(processFinishedAtChange(user, media, prevFinishedAt, explicitHighlightProvided));
+        awarded.addAll(processRatingChangeIfNeeded(user, media, prevRating));
+        awarded.addAll(processStatusChangeIfNeeded(user, media, explicitHighlightProvided));
+        return awarded;
+    }
+
+    private List<String> processFinishedAtChange(User user, UserMedia media, LocalDate prevFinishedAt, boolean explicitHighlightProvided) {
+        List<String> awarded = new ArrayList<>();
+
+        if (Objects.equals(prevFinishedAt, media.getFinishedAt())) {
+            // no change in finishedAt -> nothing to do for read/goal achievements
+            return awarded;
+        }
+
+        // newly finished
+        if (prevFinishedAt == null) {
+            if (!explicitHighlightProvided) {
+                long highlightedCount = repository.countByUserAndTypeAndHighlightedTrue(user, media.getType());
+                int limit = getHighlightLimit(media.getType());
+                if (highlightedCount < limit && !media.isHighlighted()) {
+                    media.setHighlighted(true);
+                    assignDisplayOrderIfMissing(media, user);
+                }
+            }
+
+            // increment active goals that include this finishedAt
+            goalService.updateProgress(user, media.getType(), media.getFinishedAt());
+
+            // award achievements based on updated totals and media type
+            int totalCompleted = (int) repository.countByUserAndTypeAndCompletedTrue(user, media.getType());
+            switch (media.getType()) {
+                case BOOK:
+                    awarded.addAll(achievementService.awardReadCountAchievements(user, totalCompleted));
+                    break;
+                case MOVIE:
+                    awarded.addAll(achievementService.awardWatchCountAchievements(user, totalCompleted));
+                    break;
+                case SERIES:
+                    awarded.addAll(achievementService.awardSeriesWatchCountAchievements(user, totalCompleted));
+                    break;
+                case GAME:
+                    awarded.addAll(achievementService.awardGamePlayCountAchievements(user, totalCompleted));
+                    break;
+            }
+
+            // award any achievements related to goal completion
+            achievementService.awardGoalCompletionAchievements(user);
+            return awarded;
+        }
+
+        // moved date or unmarked -> full recalc handles awards internally
+        goalService.recalculateProgress(user, media.getType());
+        return awarded;
+    }
+
+    private List<String> processRatingChangeIfNeeded(User user, UserMedia media, Integer prevRating) {
+        if (Objects.equals(prevRating, media.getRating())) {
+            return List.of();
+        }
+
+        int ratedCount = (int) repository.countByUserAndTypeAndRatingIsNotNull(user, media.getType());
+        return new ArrayList<>(achievementService.awardRatingCountAchievements(user, ratedCount));
+    }
+
+    private List<String> processStatusChangeIfNeeded(User user, UserMedia media, boolean explicitHighlightProvided) {
+        List<String> awarded = new ArrayList<>();
+
+        // If status is COMPLETED and finishedAt is null, set highlighted automatically
+        if (media.getStatus() == MediaStatus.COMPLETED && media.getFinishedAt() == null) {
+            if (!explicitHighlightProvided) {
+                long highlightedCount = repository.countByUserAndTypeAndHighlightedTrue(user, media.getType());
+                int limit = getHighlightLimit(media.getType());
+                if (highlightedCount < limit && !media.isHighlighted()) {
+                    media.setHighlighted(true);
+                    assignDisplayOrderIfMissing(media, user);
+                }
+            }
+
+            // Award achievements based on completed status
+            int totalCompleted = (int) repository.countByUserAndTypeAndCompletedTrue(user, media.getType());
+            switch (media.getType()) {
+                case BOOK:
+                    awarded.addAll(achievementService.awardReadCountAchievements(user, totalCompleted));
+                    break;
+                case MOVIE:
+                    awarded.addAll(achievementService.awardWatchCountAchievements(user, totalCompleted));
+                    break;
+                case SERIES:
+                    awarded.addAll(achievementService.awardSeriesWatchCountAchievements(user, totalCompleted));
+                    break;
+                case GAME:
+                    awarded.addAll(achievementService.awardGamePlayCountAchievements(user, totalCompleted));
+                    break;
+            }
+        }
+
+        return awarded;
     }
 
     private void applyRatingUpdate(UserMedia media, Integer rating) {
@@ -122,6 +367,8 @@ public class UserMediaService {
 
     private void applyFinishedAtUpdate(UserMedia media, LocalDate finishedAt) {
         if (finishedAt == null) {
+            media.setFinishedAt(null);
+            media.setCompleted(false);
             return;
         }
 
@@ -137,7 +384,7 @@ public class UserMediaService {
         boolean highlighted = highlightedValue;
 
         if (highlighted) {
-            validateHighlightLimit(user);
+            validateHighlightLimit(user, media.getType());
         }
 
         media.setHighlighted(highlighted);
@@ -164,15 +411,19 @@ public class UserMediaService {
                 .orElseThrow(() -> new NotFoundException("Mídia não encontrada"));
     }
 
-    private void validateHighlightLimit(User user) {
-        long count = repository.countByUserAndHighlightedTrue(user);
+    private void validateHighlightLimit(User user, MediaType type) {
+        long count = repository.countByUserAndTypeAndHighlightedTrue(user, type);
+        int limit = getHighlightLimit(type);
 
-        if (count >= 6) {
-            throw new HighlightLimitExceededException("Máximo de 6 itens no perfil");
+        if (count >= limit) {
+            throw new HighlightLimitExceededException("Máximo de " + limit + " itens no perfil");
         }
     }
 
     private UserMediaResponse toResponse(UserMedia media) {
+        List<Long> collectionIds = media.getCollections().stream()
+                .map(MediaCollection::getId)
+                .toList();
         return new UserMediaResponse(
                 media.getId(),
                 media.getExternalId(),
@@ -181,7 +432,21 @@ public class UserMediaService {
                 media.getThumbnail(),
                 media.isCompleted(),
                 media.getRating(),
-                media.getFinishedAt()
+                media.getFinishedAt(),
+                media.getStatus(),
+                media.getCurrentSeason(),
+                media.getCurrentEpisode(),
+                media.getAuthor(),
+                collectionIds
         );
+    }
+
+    private int getHighlightLimit(MediaType type) {
+        return switch (type) {
+            case BOOK -> 6;
+            case MOVIE -> 8;
+            case SERIES -> 6;
+            case GAME -> 6;
+        };
     }
 }

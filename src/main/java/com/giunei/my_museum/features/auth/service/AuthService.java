@@ -3,7 +3,9 @@ package com.giunei.my_museum.features.auth.service;
 import com.giunei.my_museum.exceptions.InvalidPasswordOrUsernameException;
 import com.giunei.my_museum.features.auth.dto.AuthResponse;
 import com.giunei.my_museum.features.auth.dto.LoginRequest;
+import com.giunei.my_museum.features.auth.dto.RefreshTokenRequest;
 import com.giunei.my_museum.features.auth.dto.RegisterRequest;
+import com.giunei.my_museum.features.auth.entity.RefreshToken;
 import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -17,13 +19,13 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final UserRegistrationService userRegistrationService;
     private final EmailVerificationService emailVerificationService;
 
     public AuthResponse register(RegisterRequest request) {
         User user = userRegistrationService.registerUser(request);
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token);
+        return issueTokens(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -34,11 +36,32 @@ public class AuthService {
             throw new InvalidPasswordOrUsernameException("Usuário ou senha inválida");
         }
 
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token);
+        return issueTokens(user);
+    }
+
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        RefreshToken rotatedToken = refreshTokenService.rotate(request.refreshToken());
+        String accessToken = jwtService.generateAccessToken(rotatedToken.getUser());
+
+        return AuthResponse.from(
+                accessToken,
+                rotatedToken.getToken(),
+                jwtService.getAccessTokenExpirationSeconds()
+        );
     }
 
     public String verifyEmail(String token) {
         return emailVerificationService.verifyEmail(token);
+    }
+
+    private AuthResponse issueTokens(User user) {
+        String accessToken = jwtService.generateAccessToken(user);
+        RefreshToken refreshToken = refreshTokenService.createToken(user);
+
+        return AuthResponse.from(
+                accessToken,
+                refreshToken.getToken(),
+                jwtService.getAccessTokenExpirationSeconds()
+        );
     }
 }

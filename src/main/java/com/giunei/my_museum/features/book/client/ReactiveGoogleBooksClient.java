@@ -25,7 +25,7 @@ public class ReactiveGoogleBooksClient {
     private static final String GOOGLE_BOOKS_FIELDS =
             "totalItems,items(id,volumeInfo(title,authors,description,imageLinks/thumbnail,language,pageCount))";
 
-    private final WebClient webClient;
+    private final WebClient googleBooksWebClient;
 
     @Value("${google.books.api.key}")
     private String apiKey;
@@ -45,7 +45,7 @@ public class ReactiveGoogleBooksClient {
     public Mono<GoogleBooksApiResponse> searchBooks(String query, int page, int size) {
         int startIndex = page * size;
 
-        return webClient.get()
+        return googleBooksWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/volumes")
                         .queryParam("q", query)

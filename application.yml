@@ -1,7 +1,12 @@
 spring:
   profiles:
     active: dev
+  main:
+    allow-bean-definition-overriding: true
 
 jwt:
   secret: ${JWT_SECRET}
-  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+  access:
+    expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
+  refresh:
+    expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:1209600000}

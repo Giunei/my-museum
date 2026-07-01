@@ -6,5 +6,14 @@ public enum Nationality {
     US,
     CN,
     CA,
-    ES
+    ES,
+    AR,
+    CL,
+    PY,
+    CO,
+    EC,
+    MX,
+    VE,
+    UY,
+    OTHER
 }

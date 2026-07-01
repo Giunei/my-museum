@@ -3,8 +3,8 @@ package com.giunei.my_museum.core.websocket;
 import com.giunei.my_museum.features.auth.service.JwtService;
 import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.entity.User;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.Message;
@@ -26,10 +26,16 @@ public class WebSocketJwtChannelInterceptor implements ChannelInterceptor {
     private final UserRepository userRepository;
 
     @Override
+    @Nullable
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        if (accessor == null || !StompCommand.CONNECT.equals(accessor.getCommand())) {
+        if (accessor == null) {
+            return message;
+        }
+
+        StompCommand command = accessor.getCommand();
+        if (command == null || !StompCommand.CONNECT.equals(command)) {
             return message;
         }
 
@@ -39,8 +45,9 @@ public class WebSocketJwtChannelInterceptor implements ChannelInterceptor {
             authorization = accessor.getFirstNativeHeader("authorization");
         }
 
+        // Require token for user-specific destinations
         if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Token JWT ausente no WebSocket");
+            return message;
         }
 
         String token = authorization.substring(7);
@@ -54,10 +61,16 @@ public class WebSocketJwtChannelInterceptor implements ChannelInterceptor {
                 throw new IllegalArgumentException("Token JWT inválido no WebSocket");
             }
 
-            accessor.setUser(new UsernamePasswordAuthenticationToken(user, null, List.of()));
+            accessor.setUser(new UsernamePasswordAuthenticationToken(user.getUsername(), null, List.of()));
             return message;
-        } catch (ExpiredJwtException | JwtException | IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Falha ao autenticar conexão WebSocket", ex);
+        } catch (JwtException | IllegalArgumentException ex) {
+            // Allow connection but without user authentication
+            return message;
+        } catch (Exception ex) {
+            // Allow connection but without user authentication
+            return message;
         }
     }
 }
+
+

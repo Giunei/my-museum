@@ -1,5 +1,7 @@
 package com.giunei.my_museum.features.book.dto;
 
+import com.giunei.my_museum.features.media.dto.UserCollectionInfo;
+
 import java.util.List;
 
 public record BookResponse(
@@ -8,7 +10,12 @@ public record BookResponse(
         List<String> authors,
         String description,
         String thumbnail,
+        String infoLink,
+        String previewLink,
         String language,
-        Integer pageCount
+        Integer pageCount,
+        Double averageRating,
+        Integer ratingsCount,
+        UserCollectionInfo userCollectionInfo
 ) {
 }

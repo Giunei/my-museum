@@ -2,20 +2,20 @@ package com.giunei.my_museum.features.book.mapper;
 
 import com.giunei.my_museum.features.book.dto.BookResponse;
 import com.giunei.my_museum.features.book.dto.GoogleBooksApiResponse;
-import lombok.RequiredArgsConstructor;
+import com.giunei.my_museum.features.media.dto.UserCollectionInfo;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class BookMapper {
 
-    private final ObjectMapper objectMapper;
-
     public BookResponse toResponse(GoogleBooksApiResponse.Item item) {
+        return toResponse(item, null);
+    }
+
+    public BookResponse toResponse(GoogleBooksApiResponse.Item item, UserCollectionInfo userCollectionInfo) {
         var info = item.volumeInfo();
         if (info == null) return null;
 
@@ -28,12 +28,21 @@ public class BookMapper {
                 authors,
                 info.description(),
                 thumbnail,
+                info.infoLink(),
+                info.previewLink(),
                 info.language(),
-                info.pageCount()
+                info.pageCount(),
+                info.averageRating(),
+                info.ratingsCount(),
+                userCollectionInfo
         );
     }
 
     public List<BookResponse> toResponseList(GoogleBooksApiResponse response) {
+        return toResponseList(response, null);
+    }
+
+    public List<BookResponse> toResponseList(GoogleBooksApiResponse response, UserCollectionInfo userCollectionInfo) {
         if (response == null || response.items() == null) {
             return List.of();
         }
@@ -66,8 +75,13 @@ public class BookMapper {
                             authors,
                             description,
                             thumbnail,
+                            volumeInfo.infoLink(),
+                            volumeInfo.previewLink(),
                             language,
-                            volumeInfo.pageCount()
+                            volumeInfo.pageCount(),
+                            volumeInfo.averageRating(),
+                            volumeInfo.ratingsCount(),
+                            userCollectionInfo
                     );
                 })
                 .toList();

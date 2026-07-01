@@ -2,10 +2,10 @@ package com.giunei.my_museum.features.user.preference.controller;
 
 import com.giunei.my_museum.features.user.preference.dto.PreferenceOption;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceOptionsResponse;
+import com.giunei.my_museum.features.game.entity.GameGenre;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceRequest;
 import com.giunei.my_museum.features.user.preference.dto.PreferenceResponse;
 import com.giunei.my_museum.features.user.preference.entity.BookGenre;
-import com.giunei.my_museum.features.user.preference.entity.GameGenre;
 import com.giunei.my_museum.features.user.preference.entity.MovieGenre;
 import com.giunei.my_museum.features.user.preference.service.PreferenceService;
 import lombok.RequiredArgsConstructor;

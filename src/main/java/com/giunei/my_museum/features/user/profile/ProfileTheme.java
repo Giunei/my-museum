@@ -4,5 +4,6 @@ public enum ProfileTheme {
     DEFAULT,
     BROWN,
     NEON,
-    GREEN
+    GREEN,
+    PURPLE
 }

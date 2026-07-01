@@ -7,11 +7,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -19,24 +21,38 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
 
         return http
-                .cors(cors -> {
-                })
-                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/books/**").permitAll()
-                        .requestMatchers("/reactive/books/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll ()
+                        // websocket endpoints: allow SockJS handshake and transport endpoints (also permit proxied path /api/ws/**)
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/ws/**").permitAll()
+                        .requestMatchers("/books/search").permitAll()
+                        .requestMatchers("/books/curated").permitAll()
+                        .requestMatchers("/reactive/books/search").permitAll()
+                        .requestMatchers("/reactive/books/curated/stream").permitAll()
+                        .requestMatchers("/reactive/movies/curated/stream").permitAll()
+                        .requestMatchers("/reactive/series/curated/stream").permitAll()
+                        .requestMatchers("/reactive/games/curated/stream").permitAll()
+                        .requestMatchers("/books/recommendations/**").authenticated()
+                        .requestMatchers("/steam/callback").permitAll()
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
                 .build();
     }

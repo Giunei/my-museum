@@ -2,15 +2,16 @@ package com.giunei.my_museum.features.auth.repository;
 
 import com.giunei.my_museum.features.auth.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
-    Optional<RefreshToken> findByToken(String token);
-
-    void deleteAllByUser_Id(Long userId);
+    @Query("SELECT rt FROM RefreshToken rt WHERE rt.revokedAt IS NULL AND rt.expiresAt > CURRENT_TIMESTAMP ORDER BY rt.createdAt DESC")
+    List<RefreshToken> findActiveTokens();
 }
+
 

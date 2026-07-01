@@ -1,7 +1,9 @@
 package com.giunei.my_museum.features.auth.service;
 
+import com.giunei.my_museum.core.config.JwtAuthenticationEntryPoint;
 import com.giunei.my_museum.features.user.UserRepository;
 import com.giunei.my_museum.features.user.entity.User;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,6 +16,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,11 +27,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
 
@@ -37,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
+        final String token = authHeader.substring(7);
 
         try {
             String username = jwtService.extractUsername(token);
@@ -58,8 +62,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException _) {
+        } catch (ExpiredJwtException e) {
+            request.setAttribute(JwtAuthenticationEntryPoint.JWT_ERROR_ATTRIBUTE, "TOKEN_EXPIRED");
             SecurityContextHolder.clearContext();
+            jwtAuthenticationEntryPoint.commence(request, response, new org.springframework.security.authentication.AuthenticationServiceException("Token expired"));
+            return;
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException e) {
+            request.setAttribute(JwtAuthenticationEntryPoint.JWT_ERROR_ATTRIBUTE, "TOKEN_INVALID");
+            SecurityContextHolder.clearContext();
+            jwtAuthenticationEntryPoint.commence(request, response, new org.springframework.security.authentication.AuthenticationServiceException("Token invalid"));
+            return;
         }
 
         filterChain.doFilter(request, response);

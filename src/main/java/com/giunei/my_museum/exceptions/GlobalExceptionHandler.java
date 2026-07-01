@@ -38,6 +38,22 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(
+            InvalidRefreshTokenException ex,
+            HttpServletRequest request
+    ) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ExpiredRefreshTokenException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredRefreshToken(
+            ExpiredRefreshTokenException ex,
+            HttpServletRequest request
+    ) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(UsernameAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleUsernameAlreadyExists(
             UsernameAlreadyExistsException ex,
@@ -86,8 +102,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ignoredEx, HttpServletRequest request) {
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", request);
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
     private ResponseEntity<ErrorResponse> buildError(

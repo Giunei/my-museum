@@ -5,7 +5,6 @@ public record ProfileResponse(
         ProfileInfo profile,
         PersonInfo person,
         SocialInfo social,
-        HighlightInfo highlights,
-        GamificationInfo gamification
+        HighlightInfo highlights
 ) {
 }

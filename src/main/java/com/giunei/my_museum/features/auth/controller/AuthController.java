@@ -2,6 +2,7 @@ package com.giunei.my_museum.features.auth.controller;
 
 import com.giunei.my_museum.features.auth.dto.AuthResponse;
 import com.giunei.my_museum.features.auth.dto.LoginRequest;
+import com.giunei.my_museum.features.auth.dto.RefreshTokenRequest;
 import com.giunei.my_museum.features.auth.dto.RegisterRequest;
 import com.giunei.my_museum.features.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -30,8 +31,18 @@ public class AuthController {
         return service.login(request);
     }
 
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@RequestBody @Valid RefreshTokenRequest request) {
+        return service.refresh(request);
+    }
+
     @GetMapping("/verify-email")
     public String verifyEmail(@RequestParam String token) {
         return service.verifyEmail(token);
+    }
+
+    @PostMapping("/logout")
+    public void logout() {
+        // JWT tokens are stateless, logout is handled client-side by discarding the token
     }
 }

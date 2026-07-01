@@ -11,6 +11,6 @@ public record CompleteProfileRequest(
         Nationality nationality,
         Gender gender,
         LocalDate birthDate,
-        ProfileTheme theme
+        String bio
 ) {
 }

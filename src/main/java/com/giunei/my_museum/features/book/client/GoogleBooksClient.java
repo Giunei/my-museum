@@ -5,100 +5,69 @@ import com.giunei.my_museum.features.book.exeption.ExternalApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.Exceptions;
-import reactor.util.retry.Retry;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-import java.time.Duration;
-import java.util.concurrent.TimeoutException;
+import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
 public class GoogleBooksClient {
 
     private static final String GOOGLE_BOOKS_FIELDS =
-            "totalItems,items(id,volumeInfo(title,authors,description,imageLinks/thumbnail,language,pageCount))";
+            "totalItems,items(id,volumeInfo(title,authors,description,imageLinks/thumbnail,infoLink,previewLink,language,pageCount,averageRating,ratingsCount))";
 
-    private final WebClient webClient;
+    private final RestTemplate googleBooksRestTemplate;
 
     @Value("${google.books.api.key}")
     private String apiKey;
 
-    @Value("${google.books.api.timeout-seconds:4}")
-    private long timeoutSeconds;
-
-    @Value("${google.books.api.retry.max-attempts:3}")
-    private long retryMaxAttempts;
-
-    @Value("${google.books.api.retry.first-backoff-ms:200}")
-    private long firstBackoffMs;
-
-    @Value("${google.books.api.retry.max-backoff-seconds:2}")
-    private long maxBackoffSeconds;
+    @Value("${google.books.api.default-language:pt}")
+    private String defaultLanguage;
 
     public GoogleBooksApiResponse searchBooks(String query, int page, int size) {
-        int startIndex = page * size;
-
-        try {
-            return webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/volumes")
-                            .queryParam("q", query)
-                            .queryParam("startIndex", startIndex)
-                            .queryParam("maxResults", size)
-                            .queryParam("printType", "books")
-                            .queryParam("langRestrict", "pt")
-                            .queryParam("fields", GOOGLE_BOOKS_FIELDS)
-                            .queryParam("key", apiKey)
-                            .build())
-                    .retrieve()
-                    .bodyToMono(GoogleBooksApiResponse.class)
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .retryWhen(
-                            Retry.backoff(retryMaxAttempts, Duration.ofMillis(firstBackoffMs))
-                                    .maxBackoff(Duration.ofSeconds(maxBackoffSeconds))
-                                    .jitter(0.5)
-                                    .filter(this::isRetriableError)
-                                    .onRetryExhaustedThrow((ignoredSpec, signal) ->
-                                            new ExternalApiException("Falha após retries", signal.failure())
-                                    )
-                    )
-                    .block(); // continua síncrono
-        } catch (Exception ex) {
-            Throwable cause = Exceptions.unwrap(ex);
-
-            if (cause instanceof WebClientResponseException responseException) {
-                if (responseException.getStatusCode().is4xxClientError()) {
-                    throw new ExternalApiException("Erro de requisição ao buscar livros", responseException);
-                }
-                throw new ExternalApiException("API de livros indisponível", responseException);
-            }
-
-            if (cause instanceof SocketTimeoutException) {
-                throw new ExternalApiException("Timeout ao chamar API de livros", ex);
-            }
-
-            if (cause instanceof ConnectException) {
-                throw new ExternalApiException("Erro de conexão com API de livros", ex);
-            }
-
-            throw new ExternalApiException("Erro geral ao chamar API externa", ex);
-        }
+        return searchBooks(query, page, size, null, null);
     }
 
-    private boolean isRetriableError(Throwable error) {
-        if (error instanceof WebClientResponseException responseException) {
-            int status = responseException.getStatusCode().value();
-            return status == 429 || responseException.getStatusCode().is5xxServerError();
-        }
+    public GoogleBooksApiResponse searchBooks(String query, int page, int size, String language, String orderBy) {
+        int startIndex = page * size;
+        String safeLanguage = (language == null || language.isBlank())
+                ? defaultLanguage
+                : language.toLowerCase(Locale.ROOT);
+        String safeOrderBy = (orderBy == null || orderBy.isBlank()) ? "relevance" : orderBy;
 
-        return error instanceof WebClientRequestException
-                || error instanceof TimeoutException
-                || error instanceof ConnectException
-                || error instanceof SocketTimeoutException;
+        // use fromUriString to avoid IDE/resolution issues with fromHttpUrl in some classpath setups
+        String url = UriComponentsBuilder.fromUriString("https://www.googleapis.com/books/v1/volumes")
+                .queryParam("q", query)
+                .queryParam("startIndex", startIndex)
+                .queryParam("maxResults", size)
+                .queryParam("printType", "books")
+                .queryParam("langRestrict", safeLanguage)
+                .queryParam("orderBy", safeOrderBy)
+                .queryParam("fields", GOOGLE_BOOKS_FIELDS)
+                .queryParam("key", apiKey)
+                .build()
+                .toUriString();
+
+        try {
+            return googleBooksRestTemplate.getForObject(url, GoogleBooksApiResponse.class);
+        } catch (HttpStatusCodeException ex) {
+            if (ex.getStatusCode().is4xxClientError()) {
+                throw new ExternalApiException("Erro de requisição ao buscar livros", ex);
+            }
+            throw new ExternalApiException("API de livros indisponível", ex);
+        } catch (RestClientException ex) {
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+
+            switch (cause) {
+                case SocketTimeoutException socketTimeoutException -> throw new ExternalApiException("Timeout ao chamar API de livros", socketTimeoutException);
+                case ConnectException connectException -> throw new ExternalApiException("Erro de conexão com API de livros", connectException);
+                default -> throw new ExternalApiException("Erro geral ao chamar API externa", ex);
+            }
+        }
     }
 }

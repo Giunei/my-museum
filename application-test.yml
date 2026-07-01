@@ -12,3 +12,7 @@ spring:
   h2:
     console:
       enabled: true
+
+riot:
+  api:
+    key: test-riot-api-key

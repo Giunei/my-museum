@@ -1,8 +1,10 @@
 package com.giunei.my_museum.features.media.dto;
 
 import com.giunei.my_museum.features.media.enums.MediaType;
+import com.giunei.my_museum.features.media.enums.MediaStatus;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record UserMediaResponse(
         Long id,
@@ -12,5 +14,10 @@ public record UserMediaResponse(
         String thumbnail,
         Boolean completed,
         Integer rating,
-        LocalDate finishedAt
+        LocalDate finishedAt,
+        MediaStatus status,
+        Integer currentSeason,
+        Integer currentEpisode,
+        String author,
+        List<Long> collectionIds
 ) {}

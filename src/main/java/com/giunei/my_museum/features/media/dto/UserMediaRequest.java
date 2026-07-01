@@ -1,6 +1,7 @@
 package com.giunei.my_museum.features.media.dto;
 
 import com.giunei.my_museum.features.media.enums.MediaType;
+import com.giunei.my_museum.features.media.enums.MediaStatus;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record UserMediaRequest(
         @NotBlank
@@ -34,6 +36,19 @@ public record UserMediaRequest(
         LocalDate finishedAt,
 
         @PositiveOrZero
-        Integer pageCount
+        Integer pageCount,
+
+        MediaStatus status,
+
+        @PositiveOrZero
+        Integer currentSeason,
+
+        @PositiveOrZero
+        Integer currentEpisode,
+
+        @Size(max = 255)
+        String author,
+
+        List<Long> collectionIds
 ) {
 }
