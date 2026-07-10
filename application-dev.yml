@@ -8,7 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
 
   properties:
     hibernate:
@@ -40,7 +40,16 @@ spring:
 
 logging:
   level:
-    org.flywaydb: DEBUG
+    org.flywaydb: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: always
 
 cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME}

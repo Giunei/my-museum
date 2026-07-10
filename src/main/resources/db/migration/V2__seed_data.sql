@@ -10,36 +10,12 @@ VALUES (nextval('app_user_id_seq'),
         NOW(),
         NOW());
 
--- =========================
--- PERSON
--- =========================
-
 INSERT INTO person (id, name, user_id, created_at, updated_at)
 VALUES (nextval('person_id_seq'),
         'Admin',
         currval('app_user_id_seq'),
         NOW(),
         NOW());
-
--- =========================
--- MUSEUM (1-1 com USER)
--- =========================
-
-INSERT INTO museum (id, user_id, created_at, updated_at)
-VALUES (nextval('museum_id_seq'),
-        currval('app_user_id_seq'),
-        NOW(),
-        NOW());
-
--- =========================
--- CATEGORIES PADRÃO
--- =========================
-
-INSERT INTO category (id, name, photo)
-VALUES (nextval('category_id_seq'), 'Jogos Platinados', NULL),
-       (nextval('category_id_seq'), 'Filmes Assistidos', NULL),
-       (nextval('category_id_seq'), 'Séries Finalizadas', NULL),
-       (nextval('category_id_seq'), 'Livros Lidos', NULL);
 
 INSERT INTO profile (id, user_id, theme)
 VALUES (nextval('profile_id_seq'), currval('app_user_id_seq'), 'DEFAULT');
@@ -64,5 +40,4 @@ INSERT INTO achievement (code, name, description, image_url, type) VALUES
 ('COMPLETE_10_GAMES', '10 jogos concluídos', 'Concluiu 10 jogos', 'assets/achievements/jogo-10.png', 'GAME'),
 ('COMPLETE_FIRST_GOAL', 'Primeira meta concluída', 'Você concluiu sua primeira meta', 'assets/achievements/meta-1.png', 'GENERAL'),
 ('COMPLETE_5_GOALS', '5 metas concluídas', 'Você concluiu 5 metas', 'assets/achievements/meta-5.png', 'GENERAL'),
-('COMPLETE_10_GOALS', '10 metas concluídas', 'Você concluiu 10 metas', 'assets/achievements/meta-10.png', 'GENERAL'),
-('RATE_5_BOOKS', '5 avaliações dadas', 'Você avaliou 5 livros lidos', 'assets/achievements/avaliacao-5.png', 'BOOK');
+('COMPLETE_10_GOALS', '10 metas concluídas', 'Você concluiu 10 metas', 'assets/achievements/meta-10.png', 'GENERAL');

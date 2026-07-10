@@ -33,25 +33,10 @@ CREATE TABLE profile
     profile_image_url  VARCHAR(255),
     theme              VARCHAR(50),
     bio                TEXT,
+    private_profile    BOOLEAN NOT NULL DEFAULT FALSE,
     created_at         TIMESTAMP,
     updated_at         TIMESTAMP,
     CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES app_user (id)
-);
-
-CREATE TABLE museum
-(
-    id         BIGSERIAL PRIMARY KEY,
-    user_id    INTEGER UNIQUE,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    CONSTRAINT fk_museum_user FOREIGN KEY (user_id) REFERENCES app_user (id)
-);
-
-CREATE TABLE category
-(
-    id    BIGSERIAL PRIMARY KEY,
-    name  VARCHAR(255) NOT NULL,
-    photo TEXT
 );
 
 CREATE TABLE book_catalog
@@ -193,36 +178,21 @@ CREATE TABLE media_collection_user_media
 CREATE INDEX idx_media_collection_user_media_collection ON media_collection_user_media(media_collection_id);
 CREATE INDEX idx_media_collection_user_media_user_media ON media_collection_user_media(user_media_id);
 
-CREATE TABLE highlight
-(
-    id              BIGSERIAL PRIMARY KEY,
-    name            VARCHAR(255),
-    time_spent      TIME,
-    user_media_id   BIGINT,
-    category_id     INTEGER,
-    museum_id       INTEGER,
-    created_at      TIMESTAMP,
-    updated_at      TIMESTAMP,
-
-    CONSTRAINT fk_highlight_user_media FOREIGN KEY (user_media_id) REFERENCES user_media (id),
-    CONSTRAINT fk_highlight_category FOREIGN KEY (category_id) REFERENCES category (id),
-    CONSTRAINT fk_highlight_museum FOREIGN KEY (museum_id) REFERENCES museum (id)
-);
-
 CREATE TABLE follow
 (
     id           BIGSERIAL PRIMARY KEY,
     follower_id  INTEGER NOT NULL,
     following_id INTEGER NOT NULL,
+    status       VARCHAR(20) NOT NULL DEFAULT 'ACCEPTED',
     CONSTRAINT fk_follow_follower FOREIGN KEY (follower_id) REFERENCES app_user (id),
     CONSTRAINT fk_follow_following FOREIGN KEY (following_id) REFERENCES app_user (id)
 );
 
 CREATE INDEX idx_following ON follow(following_id);
 CREATE INDEX idx_follower ON follow(follower_id);
+CREATE INDEX idx_follow_status ON follow(status);
 
 -- Índices para performance na tabela user_media
-CREATE INDEX idx_museum_user_id ON museum(user_id);
 CREATE INDEX idx_user_media_user_id ON user_media(user_id);
 CREATE INDEX idx_user_media_type ON user_media(type);
 CREATE INDEX idx_user_media_external_id ON user_media(external_id);
@@ -232,16 +202,6 @@ CREATE INDEX idx_book_catalog_editorial_category ON book_catalog(editorial_categ
 CREATE INDEX idx_book_catalog_genre_name ON book_catalog_genre(genre);
 CREATE INDEX idx_movie_catalog_editorial_category ON movie_catalog(editorial_category);
 CREATE INDEX idx_series_catalog_editorial_category ON series_catalog(editorial_category);
-
-CREATE TABLE friendship
-(
-    id              BIGSERIAL PRIMARY KEY,
-    user_request_id INTEGER NOT NULL,
-    addressee_id    INTEGER NOT NULL,
-    status          VARCHAR(50),
-    CONSTRAINT fk_friendship_requester FOREIGN KEY (user_request_id) REFERENCES app_user (id),
-    CONSTRAINT fk_friendship_addressee FOREIGN KEY (addressee_id) REFERENCES app_user (id)
-);
 
 -- Tabela para preferências do usuário
 CREATE TABLE preference
@@ -346,9 +306,11 @@ CREATE INDEX idx_refresh_token_expires_at ON refresh_token(expires_at);
 -- Tabelas do sistema de jogos
 CREATE TABLE game_catalog
 (
-    id      BIGSERIAL PRIMARY KEY,
-    rawg_id BIGINT UNIQUE NOT NULL,
-    name    VARCHAR(255) NOT NULL
+    id         BIGSERIAL PRIMARY KEY,
+    rawg_id    BIGINT UNIQUE NOT NULL,
+    name       VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP
 );
 
 CREATE INDEX idx_game_catalog_rawg_id ON game_catalog(rawg_id);
@@ -416,3 +378,29 @@ ALTER TABLE user_media ADD COLUMN game_catalog_id BIGINT;
 ALTER TABLE user_media ADD CONSTRAINT fk_user_media_game_catalog FOREIGN KEY (game_catalog_id) REFERENCES game_catalog (id);
 CREATE INDEX idx_user_media_game_catalog_id ON user_media(game_catalog_id);
 
+CREATE TABLE lol_account
+(
+    id                   BIGSERIAL PRIMARY KEY,
+    user_id              BIGINT       NOT NULL UNIQUE,
+    puuid                VARCHAR(100) NOT NULL,
+    game_name            VARCHAR(100) NOT NULL,
+    tag_line             VARCHAR(20)  NOT NULL,
+    platform             VARCHAR(10)  NOT NULL,
+    solo_tier            VARCHAR(20),
+    solo_rank            VARCHAR(5),
+    solo_league_points   INTEGER,
+    solo_wins            INTEGER,
+    solo_losses          INTEGER,
+    flex_tier            VARCHAR(20),
+    flex_rank            VARCHAR(5),
+    flex_league_points   INTEGER,
+    flex_wins            INTEGER,
+    flex_losses          INTEGER,
+    last_rank_refresh_at TIMESTAMP,
+    created_at           TIMESTAMP,
+    updated_at           TIMESTAMP,
+    CONSTRAINT fk_lol_account_user FOREIGN KEY (user_id) REFERENCES app_user (id)
+);
+
+CREATE INDEX idx_lol_account_user_id ON lol_account (user_id);
+CREATE INDEX idx_lol_account_puuid ON lol_account (puuid);
