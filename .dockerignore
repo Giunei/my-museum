@@ -1,0 +1,12 @@
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+.env
+test-output.txt
+**/src/test/
+docs/
+scripts/
+FRONTEND_IMPACT.md
+README.md
