@@ -34,7 +34,7 @@ public class SteamAuthService {
     @Value("${steam.realm}")
     private String realm;
 
-    @Value("${app.frontend.url}")
+    @Value("${app.frontend.url:http://localhost:4200}")
     private String frontendUrl;
 
     private final SteamService steamService;

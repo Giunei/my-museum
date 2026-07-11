@@ -1,4 +1,9 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -16,17 +21,11 @@ spring:
     baseline-on-migrate: true
     validate-on-migrate: true
 
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -36,17 +35,17 @@ spring:
 
 app:
   frontend:
-    url: ${FRONTEND_URL}
+    url: ${FRONTEND_URL:http://localhost:4200}
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
 
 google:
   books:
     api:
-      key: ${GOOGLE_BOOKS_API_KEY}
+      key: ${GOOGLE_BOOKS_API_KEY:}
       timeout-seconds: 4
       curated:
         concurrency: 4
@@ -57,20 +56,20 @@ google:
 
 tmdb:
   api:
-    token: ${TMDB_API_TOKEN}
+    token: ${TMDB_API_TOKEN:}
 
 steam:
   api:
-    key: ${STEAM_API_KEY}
-  realm: ${STEAM_REALM}
+    key: ${STEAM_API_KEY:}
+  realm: ${STEAM_REALM:http://localhost:8080}
 
 rawg:
   api:
-    key: ${RAWG_API_KEY}
+    key: ${RAWG_API_KEY:}
 
 riot:
   api:
-    key: ${RIOT_API_KEY}
+    key: ${RIOT_API_KEY:}
 
 management:
   endpoints:
