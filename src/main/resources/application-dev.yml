@@ -52,9 +52,9 @@ management:
       show-details: always
 
 cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME}
-    api-key: ${CLOUDINARY_API_KEY}
-    api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 app:
   frontend:
@@ -88,4 +88,3 @@ rawg:
 riot:
   api:
     key: ${RIOT_API_KEY}
-

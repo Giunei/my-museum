@@ -38,6 +38,40 @@ app:
   frontend:
     url: ${FRONTEND_URL}
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+google:
+  books:
+    api:
+      key: ${GOOGLE_BOOKS_API_KEY}
+      timeout-seconds: 4
+      curated:
+        concurrency: 4
+      retry:
+        max-attempts: 3
+        first-backoff-ms: 200
+        max-backoff-seconds: 2
+
+tmdb:
+  api:
+    token: ${TMDB_API_TOKEN}
+
+steam:
+  api:
+    key: ${STEAM_API_KEY}
+  realm: ${STEAM_REALM}
+
+rawg:
+  api:
+    key: ${RAWG_API_KEY}
+
+riot:
+  api:
+    key: ${RIOT_API_KEY}
+
 management:
   endpoints:
     web:
