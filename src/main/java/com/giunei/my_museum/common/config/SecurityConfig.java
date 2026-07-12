@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/reactive/movies/curated/stream").permitAll()
                         .requestMatchers("/reactive/series/curated/stream").permitAll()
                         .requestMatchers("/reactive/games/curated/stream").permitAll()
-                        .requestMatchers("/steam/callback").permitAll()
+                        .requestMatchers("/steam/callback", "/steam/callback/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/username/*/profile").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/*/achievements", "/users/*/achievements/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/*/activities/**").permitAll()
