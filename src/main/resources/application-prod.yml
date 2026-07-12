@@ -70,7 +70,7 @@ tmdb:
 steam:
   api:
     key: ${STEAM_API_KEY:}
-  realm: ${STEAM_REALM:http://localhost:8080}
+  realm: ${STEAM_REALM}
 
 rawg:
   api:

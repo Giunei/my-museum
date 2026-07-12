@@ -1,11 +1,11 @@
 package com.giunei.my_museum.game.service;
 
+import com.giunei.my_museum.auth.service.JwtService;
 import com.giunei.my_museum.common.exception.BusinessException;
 import com.giunei.my_museum.common.exception.NotFoundException;
 import com.giunei.my_museum.common.security.SecurityUtils;
-import com.giunei.my_museum.auth.service.JwtService;
-import com.giunei.my_museum.user.repository.UserRepository;
 import com.giunei.my_museum.user.entity.User;
+import com.giunei.my_museum.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,10 +45,9 @@ public class SteamAuthService {
         User user = SecurityUtils.getAuthenticatedUser();
         String state = jwtService.generateSteamState(user.getId());
 
-        String returnUrl = UriComponentsBuilder.fromUriString(realm)
-                .path("/steam/callback")
-                .queryParam("state", state)
-                .build()
+        String returnUrl = UriComponentsBuilder.fromUriString(trimTrailingSlash(realm))
+                .path("/steam/callback/{state}")
+                .buildAndExpand(state)
                 .toUriString();
 
         return UriComponentsBuilder.fromUriString(STEAM_OPENID_URL)
@@ -57,13 +56,13 @@ public class SteamAuthService {
                 .queryParam("openid.claimed_id", IDENTIFIER_SELECT)
                 .queryParam("openid.identity", IDENTIFIER_SELECT)
                 .queryParam("openid.return_to", returnUrl)
-                .queryParam("openid.realm", realm)
+                .queryParam("openid.realm", trimTrailingSlash(realm))
                 .build()
                 .toUriString();
     }
 
     @Transactional
-    public String handleCallback(Map<String, String> params) {
+    public String handleCallback(String state, Map<String, String> params) {
         String mode = params.get("openid.mode");
 
         if ("cancel".equals(mode)) {
@@ -87,14 +86,21 @@ public class SteamAuthService {
             throw new BusinessException("Resposta OpenID inválida");
         }
 
-        String state = params.get("state");
+        if (state == null || state.isBlank()) {
+            state = params.get("state");
+        }
+
         if (state == null || !jwtService.isSteamStateValid(state)) {
             throw new BusinessException("Estado de autenticação Steam inválido ou expirado");
         }
 
         Long userId = jwtService.extractUserIdFromSteamState(state);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
+                .orElseThrow(() -> {
+                    log.warn("Steam callback: user_id={} do state não existe neste banco (confira STEAM_REALM / ambiente)",
+                            userId);
+                    return new NotFoundException("Usuário não encontrado");
+                });
 
         String identity = params.get("openid.claimed_id");
         if (identity == null) {
@@ -104,7 +110,7 @@ public class SteamAuthService {
         String steamId64 = extractSteamId64(identity);
         steamService.connect(user, steamId64);
 
-        return frontendUrl + "/steam/connected";
+        return trimTrailingSlash(frontendUrl) + "/steam/connected";
     }
 
     private boolean validateOpenIdResponse(Map<String, String> openIdParams) {
@@ -145,5 +151,12 @@ public class SteamAuthService {
 
         String[] parts = identity.split("/");
         return parts[parts.length - 1];
+    }
+
+    private static String trimTrailingSlash(String url) {
+        if (url == null || url.isBlank()) {
+            return url;
+        }
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 }
