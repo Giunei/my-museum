@@ -17,6 +17,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EmailVerificationService {
 
+    private static final String GENERIC_RESEND_MESSAGE =
+            "Se o email estiver cadastrado e ainda não verificado, você receberá um novo link em instantes.";
+
     private final EmailVerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
@@ -41,6 +44,10 @@ public class EmailVerificationService {
         return "Email verificado com sucesso!";
     }
 
+    /**
+     * Persists the verification token. Call {@link #sendVerificationEmail(User, String)}
+     * after the surrounding transaction commits.
+     */
     @Transactional
     public String createEmailVerificationToken(User user) {
         if (user.getEmail() == null || user.getEmail().isBlank()) {
@@ -63,5 +70,27 @@ public class EmailVerificationService {
             return;
         }
         emailService.sendVerificationEmail(user.getEmail(), token);
+    }
+
+    /**
+     * Creates a fresh verification token and sends the email.
+     * Unknown emails get a generic response to avoid account enumeration.
+     */
+    @Transactional
+    public String resendVerificationEmail(String email) {
+        return userRepository.findByEmailIgnoreCase(email.trim())
+                .map(this::resendForUser)
+                .orElse(GENERIC_RESEND_MESSAGE);
+    }
+
+    private String resendForUser(User user) {
+        if (user.isEmailVerified()) {
+            return "Email já verificado";
+        }
+
+        tokenRepository.deleteByUser_Id(user.getId());
+        String token = createEmailVerificationToken(user);
+        sendVerificationEmail(user, token);
+        return GENERIC_RESEND_MESSAGE;
     }
 }

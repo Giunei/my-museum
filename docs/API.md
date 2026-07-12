@@ -16,6 +16,7 @@ Erros seguem `{ "timestamp", "status", "message", "path" }`.
 | POST | `/auth/forgot-password` | — |
 | POST | `/auth/reset-password` | — |
 | GET | `/auth/verify-email?token=` | — |
+| POST | `/auth/resend-verification` | `{ "email" }` |
 
 Login/register retornam `accessToken`, `refreshToken`, `expiresInSeconds`.
 

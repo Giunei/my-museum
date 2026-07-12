@@ -6,6 +6,7 @@ import com.giunei.my_museum.auth.dto.LoginRequest;
 import com.giunei.my_museum.auth.dto.MessageResponse;
 import com.giunei.my_museum.auth.dto.RefreshTokenRequest;
 import com.giunei.my_museum.auth.dto.RegisterRequest;
+import com.giunei.my_museum.auth.dto.ResendVerificationRequest;
 import com.giunei.my_museum.auth.dto.ResetPasswordRequest;
 import com.giunei.my_museum.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -42,6 +43,11 @@ public class AuthController {
     @GetMapping("/verify-email")
     public String verifyEmail(@RequestParam String token) {
         return service.verifyEmail(token);
+    }
+
+    @PostMapping("/resend-verification")
+    public MessageResponse resendVerification(@RequestBody @Valid ResendVerificationRequest request) {
+        return new MessageResponse(service.resendVerificationEmail(request.email()));
     }
 
     @PostMapping("/forgot-password")

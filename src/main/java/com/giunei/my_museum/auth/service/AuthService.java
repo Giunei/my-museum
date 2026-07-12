@@ -56,6 +56,10 @@ public class AuthService {
         return emailVerificationService.verifyEmail(token);
     }
 
+    public String resendVerificationEmail(String email) {
+        return emailVerificationService.resendVerificationEmail(email);
+    }
+
     public String requestPasswordReset(String email) {
         return passwordResetService.requestPasswordReset(email);
     }

@@ -96,4 +96,39 @@ class EmailVerificationServiceTest extends AbstractUnitTest {
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Token inválido");
     }
+
+    @Test
+    void should_resendVerification_when_emailIsUnverified() {
+        var user = TestFixtures.user(1L, "testuser");
+        user.setEmail("testuser@test.com");
+        user.setEmailVerified(false);
+
+        when(userRepository.findByEmailIgnoreCase("testuser@test.com")).thenReturn(Optional.of(user));
+        when(tokenRepository.save(org.mockito.ArgumentMatchers.any(EmailVerificationToken.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        String message = emailVerificationService.resendVerificationEmail("testuser@test.com");
+
+        assertThat(message).contains("receberá um novo link");
+        verify(tokenRepository).deleteByUser_Id(1L);
+        verify(emailService).sendVerificationEmail(org.mockito.ArgumentMatchers.eq("testuser@test.com"),
+                org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void should_returnAlreadyVerified_when_resendingForVerifiedUser() {
+        var user = TestFixtures.user(1L, "testuser");
+        user.setEmail("testuser@test.com");
+        user.setEmailVerified(true);
+
+        when(userRepository.findByEmailIgnoreCase("testuser@test.com")).thenReturn(Optional.of(user));
+
+        String message = emailVerificationService.resendVerificationEmail("testuser@test.com");
+
+        assertThat(message).isEqualTo("Email já verificado");
+        verify(tokenRepository, never()).deleteByUser_Id(org.mockito.ArgumentMatchers.anyLong());
+        verify(emailService, never()).sendVerificationEmail(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString());
+    }
 }
