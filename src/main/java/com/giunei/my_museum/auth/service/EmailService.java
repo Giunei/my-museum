@@ -1,75 +1,128 @@
 package com.giunei.my_museum.auth.service;
 
 import com.giunei.my_museum.common.exception.EmailDeliveryException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final RestClient.Builder restClientBuilder;
+    private final String frontendUrl;
+    private final String mailFrom;
+    private final String resendApiKey;
+    private final String resendFrom;
 
-    @Value("${app.frontend.url:http://localhost:4200}")
-    private String frontendUrl;
-
-    @Value("${spring.mail.username:}")
-    private String mailFrom;
+    public EmailService(
+            @Autowired(required = false) JavaMailSender mailSender,
+            RestClient.Builder restClientBuilder,
+            @Value("${app.frontend.url:http://localhost:4200}") String frontendUrl,
+            @Value("${spring.mail.username:}") String mailFrom,
+            @Value("${resend.api-key:}") String resendApiKey,
+            @Value("${resend.from:My Museum <onboarding@resend.dev>}") String resendFrom
+    ) {
+        this.mailSender = mailSender;
+        this.restClientBuilder = restClientBuilder;
+        this.frontendUrl = frontendUrl;
+        this.mailFrom = mailFrom;
+        this.resendApiKey = resendApiKey;
+        this.resendFrom = resendFrom;
+    }
 
     public void sendVerificationEmail(String toEmail, String token) {
         String verificationUrl = frontendUrl + "/verify-email?token=" + token;
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(toEmail);
-        message.setSubject("Verificação de Email - My Museum");
-        message.setText("Olá!\n\n" +
-                "Clique no link abaixo para verificar seu email:\n" +
-                verificationUrl + "\n\n" +
-                "Este link expira em 24 horas.\n\n" +
-                "Equipe My Museum");
-
-        send(message);
+        send(
+                toEmail,
+                "Verificação de Email - My Museum",
+                "Olá!\n\n" +
+                        "Clique no link abaixo para verificar seu email:\n" +
+                        verificationUrl + "\n\n" +
+                        "Este link expira em 24 horas.\n\n" +
+                        "Equipe My Museum"
+        );
     }
 
     public void sendPasswordResetCodeEmail(String toEmail, String code) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(toEmail);
-        message.setSubject("Código de redefinição de senha - My Museum");
-        message.setText("Olá!\n\n" +
-                "Use o código abaixo para redefinir sua senha:\n\n" +
-                code + "\n\n" +
-                "Este código expira em 15 minutos.\n\n" +
-                "Se você não solicitou esta redefinição, ignore este email.\n\n" +
-                "Equipe My Museum");
-
-        send(message);
+        send(
+                toEmail,
+                "Código de redefinição de senha - My Museum",
+                "Olá!\n\n" +
+                        "Use o código abaixo para redefinir sua senha:\n\n" +
+                        code + "\n\n" +
+                        "Este código expira em 15 minutos.\n\n" +
+                        "Se você não solicitou esta redefinição, ignore este email.\n\n" +
+                        "Equipe My Museum"
+        );
     }
 
-    private void send(SimpleMailMessage message) {
+    private void send(String toEmail, String subject, String text) {
+        if (StringUtils.hasText(resendApiKey)) {
+            sendViaResend(toEmail, subject, text);
+            return;
+        }
+        sendViaSmtp(toEmail, subject, text);
+    }
+
+    private void sendViaResend(String toEmail, String subject, String text) {
+        try {
+            restClientBuilder.build()
+                    .post()
+                    .uri("https://api.resend.com/emails")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + resendApiKey)
+                    .body(Map.of(
+                            "from", resendFrom,
+                            "to", List.of(toEmail),
+                            "subject", subject,
+                            "text", text
+                    ))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("Email enviado via Resend para {}", toEmail);
+        } catch (Exception e) {
+            log.error("Falha Resend ao enviar email para {}: {}", toEmail, rootCause(e).getMessage(), e);
+            throw new EmailDeliveryException("Falha no envio do email", e);
+        }
+    }
+
+    private void sendViaSmtp(String toEmail, String subject, String text) {
+        if (mailSender == null) {
+            throw new EmailDeliveryException(
+                    "Falha no envio do email: configure RESEND_API_KEY (Railway) ou MAIL_USERNAME/MAIL_PASSWORD (local)",
+                    null
+            );
+        }
         if (!StringUtils.hasText(mailFrom)) {
             throw new EmailDeliveryException(
-                    "Falha no envio do email: MAIL_USERNAME não configurado no servidor",
+                    "Falha no envio do email: MAIL_USERNAME não configurado",
                     null
             );
         }
 
+        SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(mailFrom);
+        message.setTo(toEmail);
+        message.setSubject(subject);
+        message.setText(text);
 
         try {
             mailSender.send(message);
-            log.info("Email enviado para {}", message.getTo() != null ? message.getTo()[0] : "?");
+            log.info("Email enviado via SMTP para {}", toEmail);
         } catch (Exception e) {
-            Throwable root = rootCause(e);
-            log.error("Falha SMTP ao enviar email para {}: {}",
-                    message.getTo() != null ? message.getTo()[0] : "?",
-                    root.getMessage(),
-                    e);
+            log.error("Falha SMTP ao enviar email para {}: {}", toEmail, rootCause(e).getMessage(), e);
             throw new EmailDeliveryException("Falha no envio do email", e);
         }
     }

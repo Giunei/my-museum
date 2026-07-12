@@ -1,4 +1,11 @@
 spring:
+  autoconfigure:
+    exclude:
+      # Railway Hobby bloqueia SMTP; email em prod vai via Resend (HTTPS).
+      - org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration
+      - org.springframework.boot.mail.autoconfigure.MailSenderValidatorAutoConfiguration
+      - org.springframework.boot.mail.autoconfigure.MailHealthContributorAutoConfiguration
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -31,17 +38,9 @@ spring:
       lettuce:
         shutdown-timeout: 2s
 
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+resend:
+  api-key: ${RESEND_API_KEY}
+  from: ${RESEND_FROM:My Museum <onboarding@resend.dev>}
 
 app:
   frontend:
@@ -95,6 +94,8 @@ management:
   health:
     redis:
       enabled: true
+    mail:
+      enabled: false
 
 logging:
   level:
