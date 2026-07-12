@@ -35,7 +35,7 @@ spring:
 
 app:
   frontend:
-    url: ${FRONTEND_URL:http://localhost:4200}
+    url: ${FRONTEND_URL:https://my-museum-ui-zeta.vercel.app}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}

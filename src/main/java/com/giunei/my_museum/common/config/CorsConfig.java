@@ -1,6 +1,5 @@
 package com.giunei.my_museum.common.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -12,14 +11,16 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.frontend.url:http://localhost:4200}")
-    private String frontendUrl;
+    static final List<String> ALLOWED_ORIGINS = List.of(
+            "http://localhost:4200",
+            "https://my-museum-ui-zeta.vercel.app"
+    );
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(frontendUrl));
+        config.setAllowedOrigins(ALLOWED_ORIGINS);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setExposedHeaders(List.of("Authorization"));
