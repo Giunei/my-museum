@@ -10,6 +10,7 @@ import com.giunei.my_museum.game.entity.SteamAccount;
 import com.giunei.my_museum.game.entity.UserGame;
 import com.giunei.my_museum.game.repository.UserGameRepository;
 import com.giunei.my_museum.media.entity.UserMedia;
+import com.giunei.my_museum.media.enums.MediaStatus;
 import com.giunei.my_museum.media.enums.MediaType;
 import com.giunei.my_museum.media.repository.UserMediaRepository;
 import com.giunei.my_museum.user.repository.UserRepository;
@@ -317,6 +318,7 @@ public class SteamSyncProcessor {
         media.setType(MediaType.GAME);
         assignExternalIdIfMissing(media, enriched);
         assignTitleIfMissing(media, enriched.steamName());
+        applyImportDefaultsIfNew(media, userGame);
 
         userGame.setMedia(media);
         userGame.setSteamAppId(enriched.appId());
@@ -328,6 +330,23 @@ public class SteamSyncProcessor {
 
         mediaToSave.add(media);
         gamesToSave.add(userGame);
+    }
+
+    private void applyImportDefaultsIfNew(UserMedia media, UserGame userGame) {
+        boolean newMedia = media.getId() == null;
+        if (newMedia) {
+            media.setStatus(MediaStatus.PENDING);
+            media.setCompleted(false);
+            media.setFinishedAt(null);
+            media.setRating(null);
+        } else if (media.getStatus() == null) {
+            media.setStatus(MediaStatus.PENDING);
+            media.setCompleted(false);
+        }
+
+        if (userGame.getStatus() == null) {
+            userGame.setStatus(media.getStatus() != null ? media.getStatus() : MediaStatus.PENDING);
+        }
     }
 
     private void assignExternalIdIfMissing(UserMedia media, EnrichedGame enriched) {

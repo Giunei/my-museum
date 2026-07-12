@@ -6,6 +6,7 @@ public record ProfileResponse(
         PersonInfo person,
         SocialInfo social,
         Long totalItems,
+        Long ratingsCount,
         ProfileVisibilityInfo visibility
 ) {
 }

@@ -55,6 +55,7 @@ class ProfileServiceTest extends AbstractUnitTest {
         when(followService.getFollowersCount(owner)).thenReturn(10);
         when(followService.getFollowingCount(owner)).thenReturn(5);
         when(userMediaRepository.countByUser(owner)).thenReturn(42L);
+        when(userMediaRepository.countByUserAndRatingIsNotNull(owner)).thenReturn(6L);
 
         try (MockedStatic<SecurityUtils> securityUtils = mockStatic(SecurityUtils.class)) {
             securityUtils.when(SecurityUtils::getAuthenticatedUserOrNull).thenReturn(null);
@@ -63,6 +64,7 @@ class ProfileServiceTest extends AbstractUnitTest {
             assertThat(response.user().username()).isEqualTo("owner");
             assertThat(response.social().followers()).isEqualTo(10);
             assertThat(response.totalItems()).isEqualTo(42L);
+            assertThat(response.ratingsCount()).isEqualTo(6L);
         }
     }
 
@@ -86,6 +88,7 @@ class ProfileServiceTest extends AbstractUnitTest {
             ProfileResponse response = profileService.getProfileByUsername("owner");
 
             assertThat(response.totalItems()).isNull();
+            assertThat(response.ratingsCount()).isNull();
             assertThat(response.visibility().canViewFullProfile()).isFalse();
         }
     }

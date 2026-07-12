@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.giunei</groupId>
 	<artifactId>my-museum</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>my-museum</name>
 	<description>API do My Museum — coleção pessoal de livros, filmes, séries e jogos</description>
 	<packaging>jar</packaging>

@@ -59,20 +59,19 @@ public class UserMediaService {
             }
         }
 
-        MediaStatus status = request.status() != null ? request.status() : MediaStatus.PENDING;
-        boolean completed = request.finishedAt() != null || status == MediaStatus.COMPLETED;
+        MediaProgress progress = resolveCreateProgress(request);
 
         UserMedia media = UserMedia.builder()
                 .externalId(request.externalId())
                 .type(request.type())
                 .title(request.title())
                 .thumbnail(request.thumbnail())
-                .completed(completed)
+                .completed(progress.completed())
                 .rating(request.rating())
-                .finishedAt(request.finishedAt())
+                .finishedAt(progress.finishedAt())
                 .user(user)
                 .pageCount(request.pageCount())
-                .status(status)
+                .status(progress.status())
                 .currentSeason(request.currentSeason())
                 .currentEpisode(request.currentEpisode())
                 .author(request.author())
@@ -235,6 +234,7 @@ public class UserMediaService {
         // apply requested changes
         applyRatingUpdate(media, request.rating());
         applyFinishedAtUpdate(media, request.finishedAt());
+        applyStatusUpdate(media, request.status());
 
         // update series progress
         if (request.currentSeason() != null) {
@@ -361,10 +361,43 @@ public class UserMediaService {
         }
 
         media.setFinishedAt(finishedAt);
-        media.setCompleted(true);
-        if (media.getStatus() != MediaStatus.COMPLETED) {
-            media.setStatus(MediaStatus.COMPLETED);
+        markCompleted(media);
+    }
+
+    private void applyStatusUpdate(UserMedia media, MediaStatus status) {
+        if (status == null) {
+            return;
         }
+
+        media.setStatus(status);
+        if (status == MediaStatus.COMPLETED) {
+            media.setCompleted(true);
+            return;
+        }
+
+        media.setCompleted(false);
+        media.setFinishedAt(null);
+    }
+
+    private MediaProgress resolveCreateProgress(UserMediaRequest request) {
+        boolean markAsCompleted = Boolean.TRUE.equals(request.completed())
+                || request.finishedAt() != null
+                || request.status() == MediaStatus.COMPLETED;
+
+        if (markAsCompleted) {
+            return new MediaProgress(MediaStatus.COMPLETED, true, request.finishedAt());
+        }
+
+        MediaStatus status = request.status() != null ? request.status() : MediaStatus.PENDING;
+        return new MediaProgress(status, false, null);
+    }
+
+    private void markCompleted(UserMedia media) {
+        media.setCompleted(true);
+        media.setStatus(MediaStatus.COMPLETED);
+    }
+
+    private record MediaProgress(MediaStatus status, boolean completed, LocalDate finishedAt) {
     }
 
     private void applyHighlightUpdate(UserMedia media, User user, Boolean highlightedValue) {

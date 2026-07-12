@@ -50,11 +50,7 @@ public class UserGameService {
         media.setType(MediaType.GAME);
         media.setExternalId(gameCatalog.getRawgId().toString());
         media.setTitle(gameCatalog.getName());
-        media.setStatus(request.status());
-
-        if (request.status() == MediaStatus.COMPLETED) {
-            media.setCompleted(true);
-        }
+        applyProgressToMedia(media, request.status(), null);
 
         media = userMediaRepository.save(media);
 
@@ -67,7 +63,7 @@ public class UserGameService {
         userGame.setAchievementsUnlocked(0);
         userGame.setTotalAchievements(0);
         userGame.setPlatinumed(request.platinumed());
-        userGame.setStatus(request.status());
+        userGame.setStatus(media.getStatus());
         userGame.setRawgId(gameCatalog.getRawgId());
         userGame.setName(gameCatalog.getName());
         userGame.setGenres(null);
@@ -182,7 +178,7 @@ public class UserGameService {
 
         if (request.finishedAt() != null) {
             media.setFinishedAt(request.finishedAt());
-            media.setCompleted(true);
+            applyProgressToMedia(media, MediaStatus.COMPLETED, request.finishedAt());
             userGame.setStatus(MediaStatus.COMPLETED);
         }
 
@@ -191,10 +187,8 @@ public class UserGameService {
         }
 
         if (request.status() != null) {
-            userGame.setStatus(request.status());
-            if (request.status() == MediaStatus.COMPLETED && request.finishedAt() == null) {
-                media.setCompleted(true);
-            }
+            applyProgressToMedia(media, request.status(), request.finishedAt());
+            userGame.setStatus(media.getStatus());
         }
 
         if (request.platinumed() != null) {
@@ -209,6 +203,22 @@ public class UserGameService {
                 || previousFinishedAt != null && media.getFinishedAt() == null) {
             goalService.recalculateProgress(user, MediaType.GAME);
         }
+    }
+
+    private void applyProgressToMedia(UserMedia media, MediaStatus status, LocalDate finishedAt) {
+        MediaStatus resolved = status != null ? status : MediaStatus.PENDING;
+        media.setStatus(resolved);
+
+        if (resolved == MediaStatus.COMPLETED) {
+            media.setCompleted(true);
+            if (finishedAt != null) {
+                media.setFinishedAt(finishedAt);
+            }
+            return;
+        }
+
+        media.setCompleted(false);
+        media.setFinishedAt(null);
     }
 
     @Transactional

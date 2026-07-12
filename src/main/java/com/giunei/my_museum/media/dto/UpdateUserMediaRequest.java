@@ -1,5 +1,6 @@
 package com.giunei.my_museum.media.dto;
 
+import com.giunei.my_museum.media.enums.MediaStatus;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -15,6 +16,8 @@ public record UpdateUserMediaRequest(
         LocalDate finishedAt,
 
         Boolean highlighted,
+
+        MediaStatus status,
 
         @PositiveOrZero
         Integer currentSeason,

@@ -4,9 +4,14 @@ Build Status
 
 ![Build](https://github.com/Giunei/my-museum/actions/workflows/backend.yml/badge.svg)
 
-API para gerenciar e exibir uma coleção pessoal de livros, filmes, séries e jogos — com perfil social, metas, conquistas e recomendações.
+![Home](docs/images/homeMM.png)
 
-**Stack:** Java 25 · Spring Boot 4 · PostgreSQL · Redis · JWT
+MyMuseum é uma plataforma social onde usuários podem construir seu próprio museu pessoal de entretenimento.
+
+É possível catalogar livros, filmes, séries e jogos, criar metas, desbloquear conquistas, dar notas, seguir outros usuários, sincronizar bibliotecas externas (Steam) e receber recomendações personalizadas.
+
+O projeto foi desenvolvido como portfólio utilizando uma arquitetura moderna baseada em Spring Boot e Angular.
+**Stack:** Java 25 · Spring Boot 4 · PostgreSQL · Redis · JWT · Docker · GitHub Actions
 
 ## Rodando local
 
@@ -69,3 +74,48 @@ Autenticação: `Authorization: Bearer <accessToken>`. Refresh em `POST /auth/re
 ```bash
 mvn test
 ```
+
+## Funcionalidades
+
+- Login JWT
+- Cadastro de usuários
+- Perfil público e privado
+- Sistema de seguidores
+- Comentários em perfis
+- Biblioteca pessoal
+- Livros
+- Filmes
+- Séries
+- Jogos
+- Avaliação em notas
+- Conquistas
+- Metas
+- Recomendações
+- Integração Steam
+- Integração Google Books
+- Integração TMDB
+- Cache Redis
+- Upload de imagens
+## Deploy
+
+Frontend
+Vercel
+
+Backend
+Railway
+
+Banco
+Neon
+
+Cache
+Redis (Upstash)
+
+## Autor
+
+Desenvolvido por
+
+Giunei Philippi Machado Júnior
+
+LinkedIn: https://www.linkedin.com/in/giunei/
+
+Email: pmjgiunei@gmail.com

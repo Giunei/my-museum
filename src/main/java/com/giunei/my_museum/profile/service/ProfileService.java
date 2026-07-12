@@ -84,6 +84,7 @@ public class ProfileService {
         int followers = followService.getFollowersCount(user);
         int following = followService.getFollowingCount(user);
         Long totalItems = canViewFullProfile ? userMediaRepository.countByUser(user) : null;
+        Long ratingsCount = canViewFullProfile ? userMediaRepository.countByUserAndRatingIsNotNull(user) : null;
 
         return new ProfileResponse(
                 new UserInfo(user.getId(), user.getUsername()),
@@ -96,6 +97,7 @@ public class ProfileService {
                 ),
                 new SocialInfo(followers, following),
                 totalItems,
+                ratingsCount,
                 visibility
         );
     }
