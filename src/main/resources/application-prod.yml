@@ -1,9 +1,4 @@
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -20,6 +15,20 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
+
+  data:
+    redis:
+      # Prefer SPRING_DATA_REDIS_URL / REDIS_URL (redis:// or rediss://).
+      # Otherwise use host/port (+ password/ssl).
+      url: ${SPRING_DATA_REDIS_URL:${REDIS_URL:}}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3s
+      connect-timeout: 3s
+      ssl:
+        enabled: ${REDIS_SSL:false}
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -79,6 +88,9 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    redis:
+      enabled: true
 
 logging:
   level:

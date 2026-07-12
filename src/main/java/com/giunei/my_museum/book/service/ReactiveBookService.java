@@ -41,7 +41,7 @@ public class ReactiveBookService {
             "Tudo é Rio - Carla Madeira",
             "Hábitos Atômicos - James Clear",
             "A Empregada - Freida McFadden",
-            "A Hora da Estrela - Clarice Lispector",
+            "Nunca Minta - Freida McFadden",
             "Orgulho e Preconceito - Jane Austen",
             "Dom Casmurro - Machado de Assis"
 

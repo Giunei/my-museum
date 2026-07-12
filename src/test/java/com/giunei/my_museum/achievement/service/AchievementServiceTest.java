@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -84,19 +83,21 @@ class AchievementServiceTest extends AbstractUnitTest {
         achievementService.awardIfNotExists(user, "READ_FIRST_BOOK");
 
         verify(userAchievementRepository).save(any(UserAchievement.class));
+        verify(eventPublisher).publishEvent(any());
     }
 
     @Test
-    void should_throwIllegalArgument_when_achievementCodeDoesNotExist() {
+    void should_skipAward_when_achievementCodeDoesNotExist() {
         var user = TestFixtures.user(1L, "testuser");
 
         when(userAchievementRepository.existsByUserAndAchievement_Code(user, "UNKNOWN"))
                 .thenReturn(false);
         when(achievementRepository.findById("UNKNOWN")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> achievementService.awardIfNotExists(user, "UNKNOWN"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Achievement not found: UNKNOWN");
+        achievementService.awardIfNotExists(user, "UNKNOWN");
+
+        verify(userAchievementRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

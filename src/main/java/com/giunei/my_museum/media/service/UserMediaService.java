@@ -85,7 +85,7 @@ public class UserMediaService {
             userGameService.ensureLinkedFromMedia(media);
         }
 
-        applyPostSaveBusinessRules(user, media, null, null, false);
+        applyPostSaveBusinessRules(user, media, null, false);
 
         return toResponse(media);
     }
@@ -230,7 +230,6 @@ public class UserMediaService {
 
         // capture previous values
         LocalDate prevFinishedAt = media.getFinishedAt();
-        Integer prevRating = media.getRating();
         boolean explicitHighlightProvided = request.highlighted() != null;
 
         // apply requested changes
@@ -259,7 +258,7 @@ public class UserMediaService {
             media.setCollections(collections);
         }
 
-        List<String> awarded = applyPostSaveBusinessRules(user, media, prevFinishedAt, prevRating, explicitHighlightProvided);
+        List<String> awarded = applyPostSaveBusinessRules(user, media, prevFinishedAt, explicitHighlightProvided);
 
         applyHighlightUpdate(media, user, request.highlighted());
 
@@ -269,11 +268,9 @@ public class UserMediaService {
     private List<String> applyPostSaveBusinessRules(User user,
                                                     UserMedia media,
                                                     LocalDate prevFinishedAt,
-                                                    Integer prevRating,
                                                     boolean explicitHighlightProvided) {
         List<String> awarded = new ArrayList<>();
         awarded.addAll(processFinishedAtChange(user, media, prevFinishedAt, explicitHighlightProvided));
-        awarded.addAll(processRatingChangeIfNeeded(user, media, prevRating));
         awarded.addAll(processStatusChangeIfNeeded(user, media, explicitHighlightProvided));
         return awarded;
     }
@@ -308,15 +305,6 @@ public class UserMediaService {
         }
 
         return awarded;
-    }
-
-    private List<String> processRatingChangeIfNeeded(User user, UserMedia media, Integer prevRating) {
-        if (Objects.equals(prevRating, media.getRating())) {
-            return List.of();
-        }
-
-        int ratedCount = (int) repository.countByUserAndTypeAndRatingIsNotNull(user, media.getType());
-        return new ArrayList<>(achievementService.awardRatingCountAchievements(user, ratedCount));
     }
 
     private List<String> processStatusChangeIfNeeded(User user, UserMedia media, boolean explicitHighlightProvided) {
@@ -367,14 +355,16 @@ public class UserMediaService {
     }
 
     private void applyFinishedAtUpdate(UserMedia media, LocalDate finishedAt) {
+        // Null means "not provided" on PATCH — do not clear completion/finishedAt.
         if (finishedAt == null) {
-            media.setFinishedAt(null);
-            media.setCompleted(false);
             return;
         }
 
         media.setFinishedAt(finishedAt);
         media.setCompleted(true);
+        if (media.getStatus() != MediaStatus.COMPLETED) {
+            media.setStatus(MediaStatus.COMPLETED);
+        }
     }
 
     private void applyHighlightUpdate(UserMedia media, User user, Boolean highlightedValue) {

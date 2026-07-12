@@ -16,4 +16,4 @@ COPY --from=build /app/target/*.jar app.jar
 USER app
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-Dserver.port=${PORT:-8080}", "-jar", "app.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-Dserver.port=${PORT:-8080}", "-jar", "app.jar"]

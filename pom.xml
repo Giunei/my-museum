@@ -183,6 +183,9 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<jvmArguments>--enable-native-access=ALL-UNNAMED</jvmArguments>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
@@ -196,6 +199,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<skipTests>false</skipTests>
+					<argLine>--enable-native-access=ALL-UNNAMED</argLine>
 				</configuration>
 			</plugin>
 		</plugins>
