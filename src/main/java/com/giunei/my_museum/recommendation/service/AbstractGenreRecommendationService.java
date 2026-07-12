@@ -54,7 +54,7 @@ public abstract class AbstractGenreRecommendationService<T extends Recommendatio
         Set<String> preferredGenres = loadOnboardingGenres(user, preferenceType);
 
         if (preferredGenres.isEmpty()) {
-            return bucketize(List.of(), limitPerBucket, limitPerBucket, limitPerBucket * 2);
+            return bucketize(List.of(), limitPerBucket, limitPerBucket, limitPerBucket);
         }
 
         List<RecommendationItem> items = catalog.stream()
@@ -63,7 +63,7 @@ public abstract class AbstractGenreRecommendationService<T extends Recommendatio
                 .sorted(recommendationComparator())
                 .toList();
 
-        return bucketize(items, limitPerBucket, limitPerBucket, limitPerBucket * 2);
+        return bucketize(items, limitPerBucket, limitPerBucket, limitPerBucket);
     }
 
     protected MaybeYouLikeResult maybeYouLike(
@@ -131,7 +131,7 @@ public abstract class AbstractGenreRecommendationService<T extends Recommendatio
                 onboardingGenres
         );
 
-        RecommendationResponse response = bucketize(items, limitPerBucket, limitPerBucket, limitPerBucket * 2);
+        RecommendationResponse response = bucketize(items, limitPerBucket, limitPerBucket, limitPerBucket);
         return MaybeYouLikeResult.available(likedItems.size(), MIN_RATED_ITEMS_FOR_DISCOVERY, response);
     }
 

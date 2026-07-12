@@ -92,7 +92,7 @@ Rotas legadas `/profile-comments/*` **removidas**.
 | Mídia | `GET/POST/PATCH/DELETE /media` |
 | Livros | `/books/search`, `/books/summary`, recomendações em `/books/recommendations` |
 
-Recomendações (`for-you` e `maybe-you-like`) em livros, filmes, séries e jogos aceitam `limitPerBucket` (default `4`, min `1`, max `20`). Controla quantos itens por categoria editorial (trending, bestseller, classic) entram na resposta. Sem preferências de onboarding, `for-you` retorna `[]`.
+Recomendações (`for-you` e `maybe-you-like`) em livros, filmes, séries e jogos aceitam `limitPerBucket` (default `10`, min `1`, max `20`). Controla o **total** de itens na lista plana da resposta (misturando trending/bestseller/classic). Sem preferências de onboarding, `for-you` retorna `[]`.
 | Filmes / Séries | `/movies/*`, `/series/*` + streams em `/reactive/*` |
 | Jogos | `/games/*`, Steam `/steam/*` |
 | Metas | `/goals` |

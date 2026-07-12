@@ -57,7 +57,7 @@ public class MovieController {
 
     @GetMapping("/recommendations/for-you")
     public List<MovieRecommendationCardResponse> forYou(
-            @RequestParam(defaultValue = "4") @Min(1) @Max(20) int limitPerBucket
+            @RequestParam(defaultValue = "10") @Min(1) @Max(20) int limitPerBucket
     ) {
         User user = SecurityUtils.getAuthenticatedUser();
         return recommendationFacade.recommendedForYou(user, limitPerBucket);
@@ -65,7 +65,7 @@ public class MovieController {
 
     @GetMapping("/recommendations/maybe-you-like")
     public RecommendationSectionResponse<MovieRecommendationCardResponse> maybeYouLike(
-            @RequestParam(defaultValue = "4") @Min(1) @Max(20) int limitPerBucket
+            @RequestParam(defaultValue = "10") @Min(1) @Max(20) int limitPerBucket
     ) {
         User user = SecurityUtils.getAuthenticatedUser();
         return recommendationFacade.maybeYouLike(user, limitPerBucket);

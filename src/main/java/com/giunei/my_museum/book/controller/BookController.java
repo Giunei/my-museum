@@ -78,7 +78,7 @@ public class BookController {
 
     @GetMapping("/recommendations/for-you")
     public List<BookRecommendationCardResponse> forYou(
-            @RequestParam(defaultValue = "4") @Min(1) @Max(20) int limitPerBucket
+            @RequestParam(defaultValue = "10") @Min(1) @Max(20) int limitPerBucket
     ) {
         User user = SecurityUtils.getAuthenticatedUser();
         return recommendationFacade.recommendedForYou(user, limitPerBucket);
@@ -86,7 +86,7 @@ public class BookController {
 
     @GetMapping("/recommendations/maybe-you-like")
     public RecommendationSectionResponse<BookRecommendationCardResponse> maybeYouLike(
-            @RequestParam(defaultValue = "4") @Min(1) @Max(20) int limitPerBucket
+            @RequestParam(defaultValue = "10") @Min(1) @Max(20) int limitPerBucket
     ) {
         User user = SecurityUtils.getAuthenticatedUser();
         return recommendationFacade.maybeYouLike(user, limitPerBucket);

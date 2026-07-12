@@ -75,12 +75,11 @@ public abstract class AbstractRecommendationFacade<T, R> {
         return selectItems(allItems, getTrendingCount(), getPopularCount(), getClassicCount(), getTotalRecommendations());
     }
 
-    protected List<RecommendationItem> selectItems(List<RecommendationItem> allItems, int limitPerBucket) {
-        int trending = limitPerBucket;
-        int popular = Math.max(1, (limitPerBucket * 3) / 4);
-        int classic = Math.max(1, (limitPerBucket * 3) / 4);
-        int total = trending + popular + classic;
-        return selectItems(allItems, trending, popular, classic, total);
+    protected List<RecommendationItem> selectItems(List<RecommendationItem> allItems, int limit) {
+        int safeLimit = Math.max(1, limit);
+        // Mix editorial buckets, but never exceed the requested total size.
+        int perBucket = Math.max(1, (safeLimit + 2) / 3);
+        return selectItems(allItems, perBucket, perBucket, perBucket, safeLimit);
     }
 
     private List<RecommendationItem> selectItems(
