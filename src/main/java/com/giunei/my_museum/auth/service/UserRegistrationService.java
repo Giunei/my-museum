@@ -1,9 +1,9 @@
 package com.giunei.my_museum.auth.service;
 
-import com.giunei.my_museum.common.exception.UsernameAlreadyExistsException;
 import com.giunei.my_museum.auth.dto.RegisterRequest;
-import com.giunei.my_museum.user.repository.UserRepository;
+import com.giunei.my_museum.common.exception.UsernameAlreadyExistsException;
 import com.giunei.my_museum.user.entity.User;
+import com.giunei.my_museum.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,8 +18,10 @@ public class UserRegistrationService {
     private final UserProfileService userProfileService;
     private final EmailVerificationService emailVerificationService;
 
+    public record RegistrationResult(User user, String verificationToken) {}
+
     @Transactional
-    public User registerUser(RegisterRequest request) {
+    public RegistrationResult registerUser(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             throw new UsernameAlreadyExistsException("Username já existe");
         }
@@ -36,8 +38,8 @@ public class UserRegistrationService {
 
         userRepository.save(user);
         userProfileService.createProfileForUser(user);
-        emailVerificationService.createEmailVerificationToken(user);
+        String verificationToken = emailVerificationService.createEmailVerificationToken(user);
 
-        return user;
+        return new RegistrationResult(user, verificationToken);
     }
 }

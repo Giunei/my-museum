@@ -25,8 +25,9 @@ public class AuthService {
     private final PasswordResetService passwordResetService;
 
     public AuthResponse register(RegisterRequest request) {
-        User user = userRegistrationService.registerUser(request);
-        return issueTokens(user);
+        UserRegistrationService.RegistrationResult result = userRegistrationService.registerUser(request);
+        emailVerificationService.sendVerificationEmail(result.user(), result.verificationToken());
+        return issueTokens(result.user());
     }
 
     public AuthResponse login(LoginRequest request) {

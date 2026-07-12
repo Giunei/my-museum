@@ -1,11 +1,11 @@
 package com.giunei.my_museum.auth.service;
 
-import com.giunei.my_museum.common.exception.ExpiredTokenException;
-import com.giunei.my_museum.common.exception.NotFoundException;
 import com.giunei.my_museum.auth.entity.EmailVerificationToken;
 import com.giunei.my_museum.auth.repository.EmailVerificationTokenRepository;
-import com.giunei.my_museum.user.repository.UserRepository;
+import com.giunei.my_museum.common.exception.ExpiredTokenException;
+import com.giunei.my_museum.common.exception.NotFoundException;
 import com.giunei.my_museum.user.entity.User;
+import com.giunei.my_museum.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,11 +42,11 @@ public class EmailVerificationService {
     }
 
     @Transactional
-    public void createEmailVerificationToken(User user) {
+    public String createEmailVerificationToken(User user) {
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             user.setEmailVerified(true);
             userRepository.save(user);
-            return;
+            return null;
         }
 
         EmailVerificationToken verification = EmailVerificationToken.builder()
@@ -55,7 +55,13 @@ public class EmailVerificationService {
                 .expiresAt(LocalDateTime.now().plusHours(24))
                 .build();
         tokenRepository.save(verification);
+        return verification.getToken();
+    }
 
-        emailService.sendVerificationEmail(user.getEmail(), verification.getToken());
+    public void sendVerificationEmail(User user, String token) {
+        if (token == null || user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+        emailService.sendVerificationEmail(user.getEmail(), token);
     }
 }

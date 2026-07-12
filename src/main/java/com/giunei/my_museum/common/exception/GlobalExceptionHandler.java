@@ -42,6 +42,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EmailDeliveryException.class)
     public ResponseEntity<ErrorResponse> handleEmailDelivery(EmailDeliveryException ex, HttpServletRequest request) {
+        log.error("Email delivery failed on {}: {}", request.getRequestURI(),
+                ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage());
         return buildError(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
     }
 

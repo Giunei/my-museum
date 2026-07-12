@@ -37,6 +37,10 @@ spring:
           auth: true
           starttls:
             enable: true
+            required: true
+          connectiontimeout: 15000
+          timeout: 15000
+          writetimeout: 15000
 
 logging:
   level:

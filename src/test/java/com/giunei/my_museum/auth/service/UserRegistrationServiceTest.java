@@ -47,12 +47,15 @@ class UserRegistrationServiceTest extends AbstractUnitTest {
         when(userRepository.existsByEmail("newuser@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(emailVerificationService.createEmailVerificationToken(any(User.class))).thenReturn("verify-token");
 
-        User user = userRegistrationService.registerUser(request);
+        UserRegistrationService.RegistrationResult result = userRegistrationService.registerUser(request);
+        User user = result.user();
 
         assertThat(user.getUsername()).isEqualTo("newuser");
         assertThat(user.getEmail()).isEqualTo("newuser@test.com");
         assertThat(user.getPassword()).isEqualTo("encoded-password");
+        assertThat(result.verificationToken()).isEqualTo("verify-token");
         verify(userProfileService).createProfileForUser(user);
         verify(emailVerificationService).createEmailVerificationToken(user);
     }
