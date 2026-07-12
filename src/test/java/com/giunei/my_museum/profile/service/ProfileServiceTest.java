@@ -55,7 +55,7 @@ class ProfileServiceTest extends AbstractUnitTest {
         when(followService.getFollowersCount(owner)).thenReturn(10);
         when(followService.getFollowingCount(owner)).thenReturn(5);
         when(userMediaRepository.countByUser(owner)).thenReturn(42L);
-        when(userMediaRepository.countByUserAndRatingIsNotNull(owner)).thenReturn(6L);
+        when(userMediaRepository.countByUserAndCompletedTrueAndRatingIsNotNull(owner)).thenReturn(6L);
 
         try (MockedStatic<SecurityUtils> securityUtils = mockStatic(SecurityUtils.class)) {
             securityUtils.when(SecurityUtils::getAuthenticatedUserOrNull).thenReturn(null);

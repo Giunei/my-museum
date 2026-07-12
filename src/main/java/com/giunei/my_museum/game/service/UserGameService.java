@@ -172,7 +172,8 @@ public class UserGameService {
         LocalDate previousFinishedAt = media.getFinishedAt();
         MediaStatus previousStatus = userGame.getStatus();
 
-        if (request.rating() != null) {
+        if (request.rating() != null
+                && (media.isCompleted() || request.status() == MediaStatus.COMPLETED || request.finishedAt() != null)) {
             media.setRating(request.rating());
         }
 
@@ -189,6 +190,10 @@ public class UserGameService {
         if (request.status() != null) {
             applyProgressToMedia(media, request.status(), request.finishedAt());
             userGame.setStatus(media.getStatus());
+        }
+
+        if (!media.isCompleted()) {
+            media.setRating(null);
         }
 
         if (request.platinumed() != null) {
@@ -219,6 +224,7 @@ public class UserGameService {
 
         media.setCompleted(false);
         media.setFinishedAt(null);
+        media.setRating(null);
     }
 
     @Transactional

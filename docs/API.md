@@ -32,8 +32,14 @@ Login/register retornam `accessToken`, `refreshToken`, `expiresInSeconds`.
 | PATCH | `/profile/privacy` | sim |
 | GET | `/users/username/{username}/profile` | opcional |
 
-`ProfileResponse` inclui `visibility` (`privateProfile`, `canViewFullProfile`, `followStatus`).  
-`totalItems` é `null` quando o visitante não tem acesso ao museu.
+`ProfileResponse` inclui `visibility` (`privateProfile`, `canViewFullProfile`, `followStatus`).
+
+| Campo | Significado |
+|-------|-------------|
+| `totalItems` | Quantidade de itens na biblioteca (qualquer status) |
+| `ratingsCount` | Quantidade de **notas dadas** (itens concluídos com `rating` preenchido) |
+
+Ambos são `null` quando o visitante não tem acesso ao museu.
 
 ---
 

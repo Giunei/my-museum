@@ -67,7 +67,7 @@ public class UserMediaService {
                 .title(request.title())
                 .thumbnail(request.thumbnail())
                 .completed(progress.completed())
-                .rating(request.rating())
+                .rating(progress.completed() ? request.rating() : null)
                 .finishedAt(progress.finishedAt())
                 .user(user)
                 .pageCount(request.pageCount())
@@ -231,10 +231,10 @@ public class UserMediaService {
         LocalDate prevFinishedAt = media.getFinishedAt();
         boolean explicitHighlightProvided = request.highlighted() != null;
 
-        // apply requested changes
-        applyRatingUpdate(media, request.rating());
+        // Progress first — rating only applies to completed items.
         applyFinishedAtUpdate(media, request.finishedAt());
         applyStatusUpdate(media, request.status());
+        applyRatingUpdate(media, request.rating());
 
         // update series progress
         if (request.currentSeason() != null) {
@@ -347,6 +347,10 @@ public class UserMediaService {
             return;
         }
 
+        if (!media.isCompleted() || media.getStatus() != MediaStatus.COMPLETED) {
+            return;
+        }
+
         if (rating < 0 || rating > 5) {
             throw new InvalidMediaRatingException("Rating deve ser entre 0 e 5");
         }
@@ -377,6 +381,7 @@ public class UserMediaService {
 
         media.setCompleted(false);
         media.setFinishedAt(null);
+        media.setRating(null);
     }
 
     private MediaProgress resolveCreateProgress(UserMediaRequest request) {

@@ -30,7 +30,7 @@ public class HomeService {
 
     public HomeStatisticsResponse getStatistics() {
         long totalAchievementsUnlocked = userAchievementRepository.count();
-        long totalRatedItems = userMediaRepository.countByRatingIsNotNull();
+        long totalRatedItems = userMediaRepository.countByCompletedTrueAndRatingIsNotNull();
         long totalUsers = userRepository.count();
 
         return new HomeStatisticsResponse(totalAchievementsUnlocked, totalRatedItems, totalUsers);
@@ -58,7 +58,7 @@ public class HomeService {
                             .orElse(null);
 
                     long achievementsCount = userAchievementRepository.countByUser(user);
-                    long ratingsCount = userMediaRepository.countByUserAndRatingIsNotNull(user);
+                    long ratingsCount = userMediaRepository.countByUserAndCompletedTrueAndRatingIsNotNull(user);
 
                     return new PopularProfileResponse(
                             user.getId(),

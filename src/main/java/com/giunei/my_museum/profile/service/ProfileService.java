@@ -84,7 +84,9 @@ public class ProfileService {
         int followers = followService.getFollowersCount(user);
         int following = followService.getFollowingCount(user);
         Long totalItems = canViewFullProfile ? userMediaRepository.countByUser(user) : null;
-        Long ratingsCount = canViewFullProfile ? userMediaRepository.countByUserAndRatingIsNotNull(user) : null;
+        Long ratingsCount = canViewFullProfile
+                ? userMediaRepository.countByUserAndCompletedTrueAndRatingIsNotNull(user)
+                : null;
 
         return new ProfileResponse(
                 new UserInfo(user.getId(), user.getUsername()),

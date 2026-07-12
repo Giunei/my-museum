@@ -70,7 +70,7 @@ public interface UserMediaRepository extends JpaRepository<UserMedia, Long> {
 
     long countByUser(User user);
 
-    long countByRatingIsNotNull();
+    long countByCompletedTrueAndRatingIsNotNull();
 
-    long countByUserAndRatingIsNotNull(User user);
+    long countByUserAndCompletedTrueAndRatingIsNotNull(User user);
 }
