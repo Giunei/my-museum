@@ -1,5 +1,9 @@
 # My Museum
 
+Build Status
+
+[badge]
+
 API para gerenciar e exibir uma coleção pessoal de livros, filmes, séries e jogos — com perfil social, metas, conquistas e recomendações.
 
 **Stack:** Java 25 · Spring Boot 4 · PostgreSQL · Redis · JWT
