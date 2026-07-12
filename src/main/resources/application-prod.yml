@@ -18,17 +18,18 @@ spring:
 
   data:
     redis:
-      # Prefer SPRING_DATA_REDIS_URL / REDIS_URL (redis:// or rediss://).
-      # Otherwise use host/port (+ password/ssl).
-      url: ${SPRING_DATA_REDIS_URL:${REDIS_URL:}}
-      host: ${REDIS_HOST:localhost}
+      # Upstash: rediss://default:SENHA@HOST.upstash.io:6379
+      url: ${REDIS_URL:}
+      host: ${REDIS_HOST:}
       port: ${REDIS_PORT:6379}
       username: ${REDIS_USERNAME:}
       password: ${REDIS_PASSWORD:}
-      timeout: 3s
-      connect-timeout: 3s
+      timeout: 2s
+      connect-timeout: 2s
       ssl:
         enabled: ${REDIS_SSL:false}
+      lettuce:
+        shutdown-timeout: 2s
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -87,7 +88,9 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: never
+      show-details: when_authorized
+      probes:
+        enabled: true
   health:
     redis:
       enabled: true
@@ -95,3 +98,5 @@ management:
 logging:
   level:
     root: INFO
+    org.springframework.data.redis: INFO
+    io.lettuce.core: WARN
