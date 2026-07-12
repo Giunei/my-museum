@@ -6,6 +6,7 @@ import com.giunei.my_museum.common.exception.InvalidMediaRatingException;
 import com.giunei.my_museum.common.exception.NotFoundException;
 import com.giunei.my_museum.achievement.service.AchievementService;
 import com.giunei.my_museum.achievement.service.UserGoalService;
+import com.giunei.my_museum.game.service.UserGameService;
 import com.giunei.my_museum.media.dto.UpdateMediaResult;
 import com.giunei.my_museum.media.dto.UpdateUserMediaRequest;
 import com.giunei.my_museum.media.dto.UserMediaRequest;
@@ -36,6 +37,7 @@ public class UserMediaService {
     private final UserGoalService goalService;
     private final AchievementService achievementService;
     private final MediaCollectionRepository collectionRepository;
+    private final UserGameService userGameService;
 
     @Transactional
     public UserMediaResponse create(UserMediaRequest request) {
@@ -57,19 +59,20 @@ public class UserMediaService {
             }
         }
 
+        MediaStatus status = request.status() != null ? request.status() : MediaStatus.PENDING;
+        boolean completed = request.finishedAt() != null || status == MediaStatus.COMPLETED;
+
         UserMedia media = UserMedia.builder()
                 .externalId(request.externalId())
                 .type(request.type())
                 .title(request.title())
                 .thumbnail(request.thumbnail())
-                // Do not mark as completed just because the client passed `completed` without a finishedAt.
-                // Only consider it completed on creation when a finishedAt date was provided.
-                .completed(request.finishedAt() != null)
+                .completed(completed)
                 .rating(request.rating())
                 .finishedAt(request.finishedAt())
                 .user(user)
                 .pageCount(request.pageCount())
-                .status(request.status() != null ? request.status() : MediaStatus.PENDING)
+                .status(status)
                 .currentSeason(request.currentSeason())
                 .currentEpisode(request.currentEpisode())
                 .author(request.author())
@@ -77,6 +80,10 @@ public class UserMediaService {
                 .build();
 
         media = repository.saveAndFlush(media);
+
+        if (media.getType() == MediaType.GAME) {
+            userGameService.ensureLinkedFromMedia(media);
+        }
 
         applyPostSaveBusinessRules(user, media, null, null, false);
 

@@ -22,7 +22,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -38,7 +40,9 @@ public class SteamSyncProcessor {
 
     private record ExistingGameData(
             Map<String, UserMedia> mediaByExternalId,
-            Map<String, UserGame> gameBySteamAppId
+            Map<String, UserGame> gameBySteamAppId,
+            Map<Long, UserGame> gameByRawgId,
+            Map<String, UserGame> gameByNormalizedName
     ) {
     }
 
@@ -121,11 +125,28 @@ public class SteamSyncProcessor {
                     .filter(media -> media.getExternalId() != null)
                     .collect(Collectors.toMap(UserMedia::getExternalId, Function.identity(), (left, right) -> left));
 
-            Map<String, UserGame> gameBySteamAppId = gameRepository.findAllWithMediaByUserId(user.getId()).stream()
-                    .filter(game -> game.getSteamAppId() != null)
+            List<UserGame> existingGames = gameRepository.findAllWithMediaByUserId(user.getId());
+
+            Map<String, UserGame> gameBySteamAppId = existingGames.stream()
+                    .filter(game -> game.getSteamAppId() != null && !game.getSteamAppId().isBlank())
                     .collect(Collectors.toMap(UserGame::getSteamAppId, Function.identity(), (left, right) -> left));
 
-            return new ExistingGameData(mediaByExternalId, gameBySteamAppId);
+            Map<Long, UserGame> gameByRawgId = existingGames.stream()
+                    .filter(game -> game.getRawgId() != null)
+                    .collect(Collectors.toMap(UserGame::getRawgId, Function.identity(), (left, right) -> left));
+
+            Map<String, UserGame> gameByNormalizedName = new HashMap<>();
+            for (UserGame game : existingGames) {
+                String key = normalizeTitle(game.getName());
+                if (key == null && game.getMedia() != null) {
+                    key = normalizeTitle(game.getMedia().getTitle());
+                }
+                if (key != null) {
+                    gameByNormalizedName.putIfAbsent(key, game);
+                }
+            }
+
+            return new ExistingGameData(mediaByExternalId, gameBySteamAppId, gameByRawgId, gameByNormalizedName);
         });
     }
 
@@ -235,7 +256,7 @@ public class SteamSyncProcessor {
             RawgGameResponse response = rawgClient.searchGames(gameName, 1, 1);
             if (response == null || response.results() == null || response.results().isEmpty()) {
                 return new RawgMetadata(
-                        gameName, null, null, null, null,
+                        gameName, null, null, List.of(), List.of(),
                         rawgStoreService.applySteamFallback(null, steamAppId),
                         false
                 );
@@ -256,7 +277,7 @@ public class SteamSyncProcessor {
         } catch (Exception e) {
             log.warn("Failed to fetch RAWG data for {}: {}", gameName, e.getMessage());
             return new RawgMetadata(
-                    gameName, null, null, null, null,
+                    gameName, null, null, List.of(), List.of(),
                     rawgStoreService.applySteamFallback(null, steamAppId),
                     false
             );
@@ -270,25 +291,7 @@ public class SteamSyncProcessor {
             List<UserGame> gamesToSave = new ArrayList<>();
 
             for (EnrichedGame enriched : enrichedGames) {
-                UserGame userGame = existing.gameBySteamAppId().getOrDefault(enriched.appId(), new UserGame());
-                UserMedia media = resolveMedia(existing, userGame, enriched.appId());
-
-                media.setUser(user);
-                media.setType(MediaType.GAME);
-                media.setExternalId(enriched.appId());
-                media.setTitle(enriched.steamName());
-
-                userGame.setMedia(media);
-                userGame.setSteamAppId(enriched.appId());
-                userGame.setPlaytimeMinutes(enriched.playtimeMinutes());
-                userGame.setAchievementsUnlocked(enriched.achievementsUnlocked());
-                userGame.setTotalAchievements(enriched.totalAchievements());
-                userGame.setPlatinumed(enriched.platinumed());
-
-                applyGameMetadata(userGame, enriched);
-
-                mediaToSave.add(media);
-                gamesToSave.add(userGame);
+                prepareGameForPersist(user, existing, enriched, mediaToSave, gamesToSave);
             }
 
             if (!mediaToSave.isEmpty()) {
@@ -300,42 +303,126 @@ public class SteamSyncProcessor {
         });
     }
 
-    private UserMedia resolveMedia(ExistingGameData existing, UserGame userGame, String appId) {
+    private void prepareGameForPersist(
+            User user,
+            ExistingGameData existing,
+            EnrichedGame enriched,
+            List<UserMedia> mediaToSave,
+            List<UserGame> gamesToSave
+    ) {
+        UserGame userGame = resolveUserGame(existing, enriched);
+        UserMedia media = resolveMedia(existing, userGame, enriched);
+
+        media.setUser(user);
+        media.setType(MediaType.GAME);
+        assignExternalIdIfMissing(media, enriched);
+        assignTitleIfMissing(media, enriched.steamName());
+
+        userGame.setMedia(media);
+        userGame.setSteamAppId(enriched.appId());
+        userGame.setPlaytimeMinutes(enriched.playtimeMinutes());
+        userGame.setAchievementsUnlocked(enriched.achievementsUnlocked());
+        userGame.setTotalAchievements(enriched.totalAchievements());
+        userGame.setPlatinumed(enriched.platinumed());
+        applyGameMetadata(userGame, enriched);
+
+        mediaToSave.add(media);
+        gamesToSave.add(userGame);
+    }
+
+    private void assignExternalIdIfMissing(UserMedia media, EnrichedGame enriched) {
+        if (media.getExternalId() != null && !media.getExternalId().isBlank()) {
+            return;
+        }
+        RawgMetadata rawg = enriched.rawgMetadata();
+        if (rawg.exactMatch() && rawg.rawgId() != null) {
+            media.setExternalId(String.valueOf(rawg.rawgId()));
+            return;
+        }
+        media.setExternalId(enriched.appId());
+    }
+
+    private void assignTitleIfMissing(UserMedia media, String steamName) {
+        if (media.getTitle() == null || media.getTitle().isBlank()) {
+            media.setTitle(steamName);
+        }
+    }
+
+    private UserGame resolveUserGame(ExistingGameData existing, EnrichedGame enriched) {
+        UserGame bySteam = existing.gameBySteamAppId().get(enriched.appId());
+        if (bySteam != null) {
+            return bySteam;
+        }
+
+        if (enriched.rawgMetadata().exactMatch() && enriched.rawgMetadata().rawgId() != null) {
+            UserGame byRawg = existing.gameByRawgId().get(enriched.rawgMetadata().rawgId());
+            if (byRawg != null) {
+                return byRawg;
+            }
+        }
+
+        UserGame byName = existing.gameByNormalizedName().get(normalizeTitle(enriched.steamName()));
+        return byName != null ? byName : new UserGame();
+    }
+
+    private UserMedia resolveMedia(ExistingGameData existing, UserGame userGame, EnrichedGame enriched) {
         if (userGame.getMedia() != null && userGame.getMedia().getId() != null) {
             return userGame.getMedia();
         }
-        return existing.mediaByExternalId().getOrDefault(appId, new UserMedia());
+
+        UserMedia bySteamExternalId = existing.mediaByExternalId().get(enriched.appId());
+        if (bySteamExternalId != null) {
+            return bySteamExternalId;
+        }
+
+        if (enriched.rawgMetadata().exactMatch() && enriched.rawgMetadata().rawgId() != null) {
+            UserMedia byRawgExternalId = existing.mediaByExternalId()
+                    .get(String.valueOf(enriched.rawgMetadata().rawgId()));
+            if (byRawgExternalId != null) {
+                return byRawgExternalId;
+            }
+        }
+
+        return new UserMedia();
+    }
+
+    private String normalizeTitle(String title) {
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+        return title.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", " ")
+                .trim();
     }
 
     private void applyGameMetadata(UserGame userGame, EnrichedGame enriched) {
         RawgMetadata rawg = enriched.rawgMetadata();
-        
-        // Prefer Steam data if RAWG match is not exact
+
         if (!rawg.exactMatch()) {
             userGame.setRawgId(null);
             userGame.setName(enriched.steamName());
-            userGame.setGenres(null);
-            userGame.setPlatforms(null);
+            userGame.setGenres(List.of());
+            userGame.setPlatforms(List.of());
             userGame.setStores(rawgStoreService.applySteamFallback(null, enriched.appId()));
             userGame.getMedia().setThumbnail(enriched.steamThumbnail());
             log.info("Using Steam data for {} (RAWG match was inexact: {})",
                     enriched.steamName(), rawg.name());
-        } else {
-            userGame.setRawgId(rawg.rawgId());
-            userGame.setName(rawg.name());
-            userGame.setGenres(rawg.genres());
-            userGame.setPlatforms(rawg.platforms());
-            userGame.setStores(rawg.stores());
-            // Prefer Steam thumbnail if available, otherwise use RAWG
-            userGame.getMedia().setThumbnail(
-                    enriched.steamThumbnail() != null ? enriched.steamThumbnail() : rawg.coverUrl()
-            );
+            return;
         }
+
+        userGame.setRawgId(rawg.rawgId());
+        userGame.setName(rawg.name());
+        userGame.setGenres(rawg.genres());
+        userGame.setPlatforms(rawg.platforms());
+        userGame.setStores(rawg.stores());
+        userGame.getMedia().setThumbnail(
+                enriched.steamThumbnail() != null ? enriched.steamThumbnail() : rawg.coverUrl()
+        );
     }
 
     private List<String> extractGenreNames(List<RawgGameResponse.RawgGenre> genres) {
         if (genres == null || genres.isEmpty()) {
-            return null;
+            return List.of();
         }
         return genres.stream()
                 .map(RawgGameResponse.RawgGenre::name)
@@ -344,7 +431,7 @@ public class SteamSyncProcessor {
 
     private List<String> extractPlatformNames(List<RawgGameResponse.RawgPlatform> platforms) {
         if (platforms == null || platforms.isEmpty()) {
-            return null;
+            return List.of();
         }
         return platforms.stream()
                 .map(RawgGameResponse.RawgPlatform::platform)

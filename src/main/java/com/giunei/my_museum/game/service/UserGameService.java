@@ -1,8 +1,8 @@
 package com.giunei.my_museum.game.service;
 
+import com.giunei.my_museum.achievement.service.UserGoalService;
 import com.giunei.my_museum.common.exception.AccessDeniedException;
 import com.giunei.my_museum.common.security.SecurityUtils;
-import com.giunei.my_museum.achievement.service.UserGoalService;
 import com.giunei.my_museum.game.dto.AddGameRequest;
 import com.giunei.my_museum.game.dto.GameSummaryResponse;
 import com.giunei.my_museum.game.dto.StoreInfo;
@@ -18,6 +18,7 @@ import com.giunei.my_museum.media.enums.MediaType;
 import com.giunei.my_museum.media.repository.UserMediaRepository;
 import com.giunei.my_museum.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,8 @@ public class UserGameService {
         media.setUser(user);
         media.setType(MediaType.GAME);
         media.setExternalId(gameCatalog.getRawgId().toString());
+        media.setTitle(gameCatalog.getName());
+        media.setStatus(request.status());
 
         if (request.status() == MediaStatus.COMPLETED) {
             media.setCompleted(true);
@@ -75,13 +78,96 @@ public class UserGameService {
     }
 
     @Transactional
+    public void ensureLinkedFromMedia(UserMedia media) {
+        linkMediaAsUserGame(media);
+    }
+
+    private void linkMediaAsUserGame(UserMedia media) {
+        if (media == null || media.getType() != MediaType.GAME || media.getId() == null) {
+            return;
+        }
+
+        UserGame userGame = userGameRepository.findByMediaId(media.getId())
+                .orElseGet(UserGame::new);
+
+        userGame.setMedia(media);
+        applyDefaultCounters(userGame);
+        userGame.setStatus(media.getStatus() != null ? media.getStatus() : MediaStatus.PENDING);
+        applyIdentityFromMedia(userGame, media);
+
+        userGameRepository.save(userGame);
+    }
+
+    private void applyDefaultCounters(UserGame userGame) {
+        if (userGame.getPlaytimeMinutes() == null) {
+            userGame.setPlaytimeMinutes(0);
+        }
+        if (userGame.getAchievementsUnlocked() == null) {
+            userGame.setAchievementsUnlocked(0);
+        }
+        if (userGame.getTotalAchievements() == null) {
+            userGame.setTotalAchievements(0);
+        }
+    }
+
+    private void applyIdentityFromMedia(UserGame userGame, UserMedia media) {
+        Long rawgId = parseRawgId(media.getExternalId());
+        if (rawgId == null) {
+            if (userGame.getName() == null || userGame.getName().isBlank()) {
+                userGame.setName(media.getTitle());
+            }
+            return;
+        }
+
+        userGame.setRawgId(rawgId);
+        GameCatalog catalog = gameCatalogService.findOrCreateById(rawgId);
+        String name = resolveGameName(catalog, media.getTitle());
+        userGame.setName(name);
+
+        if (media.getTitle() == null || media.getTitle().isBlank()) {
+            media.setTitle(name);
+            userMediaRepository.save(media);
+        }
+
+        if (userGame.getStores() == null || userGame.getStores().isEmpty()) {
+            userGame.setStores(rawgStoreService.resolveStoreLinksByRawgId(rawgId, userGame.getSteamAppId()));
+        }
+    }
+
+    private String resolveGameName(GameCatalog catalog, String fallbackTitle) {
+        if (catalog.getName() != null && !"Unknown Game".equals(catalog.getName())) {
+            return catalog.getName();
+        }
+        return fallbackTitle;
+    }
+
+    private void repairOrphanGameMedia(User user) {
+        userMediaRepository.findByUserAndType(user, MediaType.GAME, Pageable.unpaged())
+                .forEach(media -> {
+                    if (userGameRepository.findByMediaId(media.getId()).isEmpty()) {
+                        linkMediaAsUserGame(media);
+                    }
+                });
+    }
+
+    private Long parseRawgId(String externalId) {
+        if (externalId == null || externalId.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(externalId.trim());
+        } catch (NumberFormatException _) {
+            return null;
+        }
+    }
+
+    @Transactional
     public void updateGame(Long id, UpdateUserGameRequest request) {
         User user = SecurityUtils.getAuthenticatedUser();
 
         UserGame userGame = userGameRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Game not found"));
 
-        // Verify ownership
         if (!userGame.getMedia().getUser().equals(user)) {
             throw new AccessDeniedException("Você não tem permissão para atualizar este jogo");
         }
@@ -125,33 +211,39 @@ public class UserGameService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserGameResponse> listHighlightedGames() {
-        return listHighlightedGames(SecurityUtils.getAuthenticatedUser());
+        return buildHighlightedGames(SecurityUtils.getAuthenticatedUser());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserGameResponse> listHighlightedGames(User user) {
+        return buildHighlightedGames(user);
+    }
+
+    private List<UserGameResponse> buildHighlightedGames(User user) {
+        repairOrphanGameMedia(user);
         return userGameRepository.findHighlightedWithMediaByUserId(user.getId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserGameResponse> listAllGames(MediaStatus statusFilter, GameSort sort) {
-        return listAllGames(SecurityUtils.getAuthenticatedUser(), statusFilter, sort);
+        return buildAllGames(SecurityUtils.getAuthenticatedUser(), statusFilter, sort);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserGameResponse> listAllGames(User user, MediaStatus statusFilter, GameSort sort) {
-        List<UserGame> games;
+        return buildAllGames(user, statusFilter, sort);
+    }
 
-        if (statusFilter == null) {
-            games = userGameRepository.findAllWithMediaByUserId(user.getId());
-        } else {
-            games = userGameRepository.findAllWithMediaByUserIdAndStatus(user.getId(), statusFilter);
-        }
+    private List<UserGameResponse> buildAllGames(User user, MediaStatus statusFilter, GameSort sort) {
+        repairOrphanGameMedia(user);
+        List<UserGame> games = statusFilter == null
+                ? userGameRepository.findAllWithMediaByUserId(user.getId())
+                : userGameRepository.findAllWithMediaByUserIdAndStatus(user.getId(), statusFilter);
 
         return applySort(games, sort).stream()
                 .map(this::toResponse)
@@ -160,14 +252,16 @@ public class UserGameService {
 
     @Transactional(readOnly = true)
     public List<UserGameResponse> listMostPlayedGames(int limit) {
-        return listMostPlayedGames(SecurityUtils.getAuthenticatedUser(), limit);
+        return buildMostPlayedGames(SecurityUtils.getAuthenticatedUser(), limit);
     }
 
     @Transactional(readOnly = true)
     public List<UserGameResponse> listMostPlayedGames(User user, int limit) {
-        List<UserGame> games = userGameRepository.findAllWithMediaByUserIdOrderByPlaytimeDesc(user.getId());
+        return buildMostPlayedGames(user, limit);
+    }
 
-        return games.stream()
+    private List<UserGameResponse> buildMostPlayedGames(User user, int limit) {
+        return userGameRepository.findAllWithMediaByUserIdOrderByPlaytimeDesc(user.getId()).stream()
                 .limit(limit)
                 .map(this::toResponse)
                 .toList();
@@ -175,16 +269,22 @@ public class UserGameService {
 
     @Transactional(readOnly = true)
     public GameSummaryResponse getSummary() {
-        return getSummary(SecurityUtils.getAuthenticatedUser());
+        return buildSummary(SecurityUtils.getAuthenticatedUser());
     }
 
     @Transactional(readOnly = true)
     public GameSummaryResponse getSummary(User user) {
+        return buildSummary(user);
+    }
 
+    private GameSummaryResponse buildSummary(User user) {
         List<UserGame> allGames = userGameRepository.findAllWithMediaByUserId(user.getId());
         int totalGames = allGames.size();
 
-        List<UserGame> completedGames = userGameRepository.findAllWithMediaByUserIdAndStatus(user.getId(), MediaStatus.COMPLETED);
+        List<UserGame> completedGames = userGameRepository.findAllWithMediaByUserIdAndStatus(
+                user.getId(),
+                MediaStatus.COMPLETED
+        );
         int completedCount = completedGames.size();
 
         int totalPlaytimeMinutes = allGames.stream()
@@ -207,18 +307,16 @@ public class UserGameService {
 
         return switch (sort) {
             case PLAYTIME -> games.stream()
-                    .sorted((a, b) -> {
-                        int aMinutes = a.getPlaytimeMinutes() != null ? a.getPlaytimeMinutes() : 0;
-                        int bMinutes = b.getPlaytimeMinutes() != null ? b.getPlaytimeMinutes() : 0;
-                        return Integer.compare(bMinutes, aMinutes);
-                    })
+                    .sorted((a, b) -> Integer.compare(
+                            b.getPlaytimeMinutes() != null ? b.getPlaytimeMinutes() : 0,
+                            a.getPlaytimeMinutes() != null ? a.getPlaytimeMinutes() : 0
+                    ))
                     .toList();
             case HIGHEST_RATED -> games.stream()
-                    .sorted((a, b) -> {
-                        int aAchievements = a.getAchievementsUnlocked() != null ? a.getAchievementsUnlocked() : 0;
-                        int bAchievements = b.getAchievementsUnlocked() != null ? b.getAchievementsUnlocked() : 0;
-                        return Integer.compare(bAchievements, aAchievements);
-                    })
+                    .sorted((a, b) -> Integer.compare(
+                            b.getAchievementsUnlocked() != null ? b.getAchievementsUnlocked() : 0,
+                            a.getAchievementsUnlocked() != null ? a.getAchievementsUnlocked() : 0
+                    ))
                     .toList();
             case ALPHABETICAL -> games.stream()
                     .sorted((a, b) -> {
@@ -237,9 +335,6 @@ public class UserGameService {
         }
 
         String name = userGame.getName() != null ? userGame.getName() : media.getTitle();
-        String thumbnail = media.getThumbnail();
-        List<String> genres = userGame.getGenres();
-        List<String> platforms = userGame.getPlatforms();
         List<StoreInfo> stores = rawgStoreService.applySteamFallback(
                 userGame.getStores(),
                 userGame.getSteamAppId()
@@ -249,7 +344,7 @@ public class UserGameService {
                 userGame.getId(),
                 media.getId(),
                 name,
-                thumbnail,
+                media.getThumbnail(),
                 userGame.getStatus(),
                 userGame.isPlatinumed(),
                 userGame.getPlaytimeMinutes(),
@@ -257,8 +352,8 @@ public class UserGameService {
                 userGame.getTotalAchievements(),
                 media.isHighlighted(),
                 media.getDisplayOrder(),
-                genres,
-                platforms,
+                userGame.getGenres(),
+                userGame.getPlatforms(),
                 stores
         );
     }

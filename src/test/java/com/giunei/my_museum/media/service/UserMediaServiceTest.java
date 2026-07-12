@@ -4,6 +4,7 @@ import com.giunei.my_museum.achievement.service.AchievementService;
 import com.giunei.my_museum.achievement.service.UserGoalService;
 import com.giunei.my_museum.common.exception.DuplicateMediaException;
 import com.giunei.my_museum.common.security.SecurityUtils;
+import com.giunei.my_museum.game.service.UserGameService;
 import com.giunei.my_museum.media.dto.UserMediaRequest;
 import com.giunei.my_museum.media.enums.MediaType;
 import com.giunei.my_museum.media.repository.MediaCollectionRepository;
@@ -32,6 +33,9 @@ class UserMediaServiceTest extends AbstractUnitTest {
 
     @Mock
     private MediaCollectionRepository collectionRepository;
+
+    @Mock
+    private UserGameService userGameService;
 
     @InjectMocks
     private UserMediaService userMediaService;

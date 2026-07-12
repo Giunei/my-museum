@@ -33,11 +33,15 @@ public class ReactiveGameService {
 
     private static final List<String> CURATED = List.of(
             "Terraria",
-            "Lies of P",
+            "Assassin's Creed Black Flag Resynced",
             "007 First Light",
-            "Cuphead",
+            "Elden Ring",
             "Crimson Desert",
-            "Marvel Rivals"
+            "Marvel Rivals",
+            "Stardew Valley",
+            "Split Fiction",
+            "Clair Obscur: Expedition 33",
+            "Palworld"
     );
 
     public Flux<GameResponse> searchGames(String query, int page) {

@@ -6,7 +6,6 @@ import com.giunei.my_museum.book.dto.BookResponse;
 import com.giunei.my_museum.book.mapper.BookMapper;
 import com.giunei.my_museum.common.security.SecurityUtils;
 import com.giunei.my_museum.media.dto.UserCollectionInfo;
-import com.giunei.my_museum.media.entity.UserMedia;
 import com.giunei.my_museum.media.repository.UserMediaRepository;
 import com.giunei.my_museum.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -43,8 +42,8 @@ public class ReactiveBookService {
             "Hábitos Atômicos - James Clear",
             "A Empregada - Freida McFadden",
             "A Hora da Estrela - Clarice Lispector",
-            "O Homem Mais Rico da Babilônia - George S. Clason",
-            "A Psicologia Financeira - Morgan Housel"
+            "Orgulho e Preconceito - Jane Austen",
+            "Dom Casmurro - Machado de Assis"
 
     );
 
