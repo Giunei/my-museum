@@ -2,7 +2,7 @@
 
 Build Status
 
-[badge]
+![Build](https://github.com/Giunei/my-museum/actions/workflows/backend.yml/badge.svg)
 
 API para gerenciar e exibir uma coleção pessoal de livros, filmes, séries e jogos — com perfil social, metas, conquistas e recomendações.
 
