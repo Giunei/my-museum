@@ -2,7 +2,7 @@
 UPDATE user_media um
 SET status = 'OWNED'
 FROM user_game ug
-WHERE ug.media_id = um.id
+WHERE ug.user_media_id = um.id
   AND ug.steam_app_id IS NOT NULL
   AND um.status = 'PENDING';
 
