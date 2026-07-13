@@ -92,7 +92,7 @@ client.connect(
 
 ### CORS / origem
 
-O backend usa `app.frontend.url` (dev: `http://localhost:4200`). Em produção, definir `FRONTEND_URL` no servidor.
+O backend usa `app.frontend.url` (dev: `http://localhost:4200`). Em produção, definir `FRONTEND_URL=https://mymuseum.giunei.dev` no servidor.
 
 ---
 

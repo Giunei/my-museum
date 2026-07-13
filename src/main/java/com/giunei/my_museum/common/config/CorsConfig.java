@@ -13,7 +13,7 @@ public class CorsConfig {
 
     static final List<String> ALLOWED_ORIGINS = List.of(
             "http://localhost:4200",
-            "https://my-museum-ui-zeta.vercel.app"
+            "https://mymuseum.giunei.dev"
     );
 
     @Bean

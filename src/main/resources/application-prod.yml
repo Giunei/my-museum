@@ -44,7 +44,7 @@ resend:
 
 app:
   frontend:
-    url: ${FRONTEND_URL:https://my-museum-ui-zeta.vercel.app}
+    url: ${FRONTEND_URL:https://mymuseum.giunei.dev}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://my-museum-ui-zeta.vercel.app"><strong>Abrir a aplicação</strong></a>
+  <a href="https://mymuseum.giunei.dev"><strong>Abrir a aplicação</strong></a>
   ·
   <a href="https://github.com/Giunei/my-museum/actions/workflows/backend.yml"><img src="https://github.com/Giunei/my-museum/actions/workflows/backend.yml/badge.svg" alt="Build"/></a>
 </p>
@@ -24,7 +24,7 @@ O projeto foi desenvolvido como portfólio full-stack, com API em **Spring Boot 
 
 | | |
 |---|---|
-| **Frontend** | [my-museum-ui-zeta.vercel.app](https://my-museum-ui-zeta.vercel.app) |
+| **Frontend** | [mymuseum.giunei.dev](https://mymuseum.giunei.dev) |
 | **API (prod)** | [my-museum-production.up.railway.app](https://my-museum-production.up.railway.app) |
 | **Versão** | `1.0.0` |
 
@@ -207,7 +207,7 @@ DATABASE_USERNAME=...
 DATABASE_PASSWORD=...
 REDIS_URL=rediss://default:...@....upstash.io:6379
 RESEND_API_KEY=re_...
-FRONTEND_URL=https://my-museum-ui-zeta.vercel.app
+FRONTEND_URL=https://mymuseum.giunei.dev
 STEAM_REALM=https://my-museum-production.up.railway.app
 STEAM_API_KEY=...
 ```
