@@ -26,8 +26,8 @@ Login/register retornam `accessToken`, `refreshToken`, `expiresInSeconds`.
 
 | Método | Path | Auth |
 |--------|------|------|
-| GET | `/profile/me` | sim |
-| PATCH | `/profile` | sim |
+| GET | `/profile/me` | sim | inclui `account` (email, emailVerified, nextUsernameChangeAvailableAt) |
+| PATCH | `/profile` | sim | body pode incluir `username` e `email` (opcionais) |
 | PATCH | `/profile/theme` | sim |
 | PATCH | `/profile/privacy` | sim |
 | GET | `/users/username/{username}/profile` | opcional |

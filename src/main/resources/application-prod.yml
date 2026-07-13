@@ -80,6 +80,10 @@ riot:
   api:
     key: ${RIOT_API_KEY:}
 
+server:
+  # Necessário atrás do proxy do Railway para IP real (rate limit por IP)
+  forward-headers-strategy: framework
+
 management:
   endpoints:
     web:

@@ -26,14 +26,15 @@ public class UserRegistrationService {
             throw new UsernameAlreadyExistsException("Username já existe");
         }
 
-        if (userRepository.existsByEmail(request.email())) {
+        String email = blankToNull(request.email());
+        if (email != null && userRepository.existsByEmail(email)) {
             throw new UsernameAlreadyExistsException("Email já cadastrado");
         }
 
         User user = User.builder()
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
-                .email(request.email())
+                .email(email)
                 .build();
 
         userRepository.save(user);
@@ -41,5 +42,12 @@ public class UserRegistrationService {
         String verificationToken = emailVerificationService.createEmailVerificationToken(user);
 
         return new RegistrationResult(user, verificationToken);
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

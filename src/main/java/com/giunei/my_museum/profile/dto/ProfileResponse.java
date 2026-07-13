@@ -7,6 +7,7 @@ public record ProfileResponse(
         SocialInfo social,
         Long totalItems,
         Long ratingsCount,
-        ProfileVisibilityInfo visibility
+        ProfileVisibilityInfo visibility,
+        AccountSettingsInfo account
 ) {
 }

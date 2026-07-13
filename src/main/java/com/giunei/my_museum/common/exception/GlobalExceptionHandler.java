@@ -89,9 +89,34 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(
+            RateLimitExceededException ex,
+            HttpServletRequest request
+    ) {
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(error);
+    }
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxSize(MaxUploadSizeExceededException ignoredEx, HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, "Arquivo excede o tamanho maximo permitido", request);
+    }
+
+    @ExceptionHandler(InvalidFileUploadException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidFileUpload(
+            InvalidFileUploadException ex,
+            HttpServletRequest request
+    ) {
+        return buildError(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(FileUploadException.class)

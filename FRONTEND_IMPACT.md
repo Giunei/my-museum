@@ -129,7 +129,115 @@ Hoje o `application.yml` default é `spring.profiles.active: dev` — por isso f
 
 ---
 
-## 5. Mudanças anteriores (ainda válidas)
+## 5. Upload de foto de perfil
+
+`POST /users/upload-profile-image` (multipart `file`):
+
+- **Aceitos:** JPG/JPEG, PNG, WebP (máx. 2MB)
+- **Rejeitados:** GIF e qualquer outro tipo (PDF, SVG, etc.), inclusive GIF renomeado
+
+Resposta de erro (`400`):
+
+```json
+{
+  "timestamp": "...",
+  "status": 400,
+  "error": "Arquivo não permitido. Envie uma imagem JPG, PNG ou WebP (GIF não é aceito).",
+  "path": "/users/upload-profile-image"
+}
+```
+
+Exibir o campo **`error`** no toast/alerta do usuário.
+
+---
+
+## 5b. Editar perfil — username e email (`PATCH /profile`)
+
+Body (campos novos opcionais; omitir = não altera):
+
+```json
+{
+  "name": "...",
+  "nationality": "...",
+  "gender": "...",
+  "birthDate": "2000-01-01",
+  "bio": "...",
+  "username": "novo_user",
+  "email": "novo@email.com"
+}
+```
+
+### Regras
+
+| Campo | Regra |
+|-------|--------|
+| `username` | Só a cada **15 dias**. Se ainda no cooldown → `400` com mensagem. |
+| `email` (já tinha email) | Só se `emailVerified === true`. Senão → `403` *"Confirme o email atual antes de alterá-lo"*. Depois fica pendente de verificação de novo. |
+| `email` (não tinha email) | Pode adicionar; envia e-mail de verificação (igual cadastro). |
+
+### Resposta
+
+```json
+{
+  "name": "...",
+  "nationality": "...",
+  "gender": "...",
+  "username": "novo_user",
+  "email": "novo@email.com",
+  "emailVerified": false,
+  "emailVerificationSent": true,
+  "nextUsernameChangeAvailableAt": "2026-07-28T12:00:00",
+  "accessToken": "...",
+  "refreshToken": "...",
+  "expiresIn": 3600
+}
+```
+
+- Se **username** mudou: gravar `accessToken` / `refreshToken` (JWT antigo fica inválido).
+- Se username **não** mudou: tokens vêm `null` — manter os atuais.
+- Se `emailVerificationSent`: avisar o usuário para confirmar o e-mail.
+
+### `GET /profile/me`
+
+Novo campo `account` (só no próprio perfil; público continua `null`):
+
+```json
+{
+  "account": {
+    "email": "me@email.com",
+    "emailVerified": true,
+    "nextUsernameChangeAvailableAt": null
+  }
+}
+```
+
+`nextUsernameChangeAvailableAt: null` = pode alterar username agora.
+
+---
+
+## 5c. Rate limit (anti-bot)
+
+| Endpoint | Limite | Escopo |
+|----------|--------|--------|
+| `POST /auth/login` | 5 / minuto | por IP |
+| `POST /auth/register` | 3 / hora | por IP |
+
+Resposta `429`:
+
+```json
+{
+  "timestamp": "...",
+  "status": 429,
+  "error": "Muitas tentativas de login. Tente novamente em breve.",
+  "path": "/auth/login"
+}
+```
+
+Header `Retry-After` (segundos). Mostrar mensagem amigável no front.
+
+---
+
+## 6. Mudanças anteriores (ainda válidas)
 
 ### `ProfileResponse`
 
@@ -147,10 +255,13 @@ Migrations consolidadas em V1–V3. Reset do banco ao trocar schema base.
 
 ---
 
-## 6. Checklist rápido para o front
+## 7. Checklist rápido para o front
 
 - [ ] Migrar edit/delete de comentários para `/profile/{username}/comments/{commentId}`
 - [ ] Remover `POST /profile-comments` e `GET /profile-comments/{userId}`
 - [ ] WebSocket: enviar `Authorization: Bearer` no `CONNECT`
 - [ ] Tratar `201` no POST de comentário e `204` no DELETE
 - [ ] Não depender de `/cache/clear` nem `/actuator/*` na aplicação
+- [ ] Upload de perfil: mostrar `error` do `400` (GIF / tipo inválido)
+- [ ] `PATCH /profile`: username/email + trocar tokens se username mudar; usar `account` do `/profile/me`
+- [ ] Login/cadastro: tratar `429` (rate limit) e header `Retry-After`

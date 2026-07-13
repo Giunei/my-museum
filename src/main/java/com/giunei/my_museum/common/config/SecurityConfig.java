@@ -1,7 +1,9 @@
 package com.giunei.my_museum.common.config;
 
-import com.giunei.my_museum.common.security.JwtAuthenticationFilter;
+import com.giunei.my_museum.common.ratelimit.AuthRateLimitFilter;
+import com.giunei.my_museum.common.ratelimit.AuthRateLimitService;
 import com.giunei.my_museum.common.security.JwtAuthenticationEntryPoint;
+import com.giunei.my_museum.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,17 +26,22 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final AuthRateLimitService authRateLimitService;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
+    public AuthRateLimitFilter authRateLimitFilter() {
+        return new AuthRateLimitFilter(authRateLimitService);
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthRateLimitFilter authRateLimitFilter) {
 
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**").permitAll ()
-                        // websocket endpoints: allow SockJS handshake and transport endpoints (also permit proxied path /api/ws/**)
+                        .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll()
                         .requestMatchers("/books/search").permitAll()
@@ -70,6 +77,7 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
+                .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)

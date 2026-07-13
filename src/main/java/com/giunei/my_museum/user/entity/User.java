@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -24,7 +25,7 @@ public class User extends EntityAbstract {
     @Column(nullable = false)
     private String password;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String email;
 
     @Builder.Default
@@ -35,6 +36,8 @@ public class User extends EntityAbstract {
     @Column(nullable = false)
     private boolean onboardingCompleted = false;
 
+    @Column(name = "username_changed_at")
+    private LocalDateTime usernameChangedAt;
 
     @OneToOne(mappedBy = "user")
     private Person person;

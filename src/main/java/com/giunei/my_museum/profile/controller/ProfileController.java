@@ -1,5 +1,6 @@
 package com.giunei.my_museum.profile.controller;
 
+import com.giunei.my_museum.auth.service.EmailVerificationService;
 import com.giunei.my_museum.profile.dto.CompleteProfileRequest;
 import com.giunei.my_museum.profile.dto.CompleteProfileResponse;
 import com.giunei.my_museum.profile.dto.ProfileResponse;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProfileController {
 
     private final ProfileService service;
+    private final EmailVerificationService emailVerificationService;
 
     @GetMapping("/me")
     public ProfileResponse getMyProfile() {
@@ -24,8 +26,12 @@ public class ProfileController {
     }
 
     @PatchMapping
-    public CompleteProfileResponse completeProfile(@RequestBody CompleteProfileRequest request) {
-        return service.completeProfile(request);
+    public CompleteProfileResponse completeProfile(@RequestBody @Valid CompleteProfileRequest request) {
+        ProfileService.ProfileUpdateResult result = service.completeProfile(request);
+        if (result.verificationToken() != null) {
+            emailVerificationService.sendVerificationEmail(result.user(), result.verificationToken());
+        }
+        return result.response();
     }
 
     @PatchMapping("/theme")
