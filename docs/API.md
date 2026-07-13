@@ -110,6 +110,18 @@ Recomendações (`for-you` e `maybe-you-like`) em livros, filmes, séries e jogo
 | Preferências | `/preference/me` |
 | Coleções | `/collections` |
 
+### Status de mídia (`MediaStatus`)
+
+| Valor | Significado |
+|-------|-------------|
+| `PENDING` | Wishlist |
+| `OWNED` | Na coleção / biblioteca (import Steam usa este) |
+| `IN_PROGRESS` | Em andamento |
+| `COMPLETED` | Concluído |
+| `ABANDONED` | Abandonado |
+
+Wishlist (`GET .../media/wishlist`) filtra só `PENDING`. Import Steam → `OWNED`.
+
 ---
 
 ## Home

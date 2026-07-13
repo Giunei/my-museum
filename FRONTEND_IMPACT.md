@@ -237,6 +237,22 @@ Header `Retry-After` (segundos). Mostrar mensagem amigável no front.
 
 ---
 
+## 5d. `MediaStatus.OWNED` (jogos Steam / biblioteca)
+
+Novo valor de status:
+
+| Status | Uso |
+|--------|-----|
+| `PENDING` | Wishlist (“quero jogar/ler/assistir”) |
+| `OWNED` | Na coleção / biblioteca, sem progresso definido |
+| `IN_PROGRESS` / `COMPLETED` / `ABANDONED` | Progresso do usuário |
+
+- Import Steam grava jogos novos como **`OWNED`** (não mais `PENDING`).
+- Wishlist (`/media/wishlist`, filtros “quero jogar”) continua só com `PENDING`.
+- Filtrar biblioteca: `GET /games?status=OWNED` (ou listagem geral sem filtro).
+
+---
+
 ## 6. Mudanças anteriores (ainda válidas)
 
 ### `ProfileResponse`
@@ -266,3 +282,4 @@ Migrations consolidadas em V1–V3. Reset do banco ao trocar schema base.
 - [ ] `PATCH /profile`: username/email + trocar tokens se username mudar; usar `account` do `/profile/me`
 - [ ] Login/cadastro: tratar `429` (rate limit) e header `Retry-After`
 - [ ] `GET /users/{username}/followers` e `/following` — listas (perfil público ou dono)
+- [ ] Jogos: tratar `OWNED` (biblioteca Steam); wishlist só `PENDING`

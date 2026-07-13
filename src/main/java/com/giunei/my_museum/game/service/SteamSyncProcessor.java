@@ -335,17 +335,17 @@ public class SteamSyncProcessor {
     private void applyImportDefaultsIfNew(UserMedia media, UserGame userGame) {
         boolean newMedia = media.getId() == null;
         if (newMedia) {
-            media.setStatus(MediaStatus.PENDING);
+            media.setStatus(MediaStatus.OWNED);
             media.setCompleted(false);
             media.setFinishedAt(null);
             media.setRating(null);
         } else if (media.getStatus() == null) {
-            media.setStatus(MediaStatus.PENDING);
+            media.setStatus(MediaStatus.OWNED);
             media.setCompleted(false);
         }
 
         if (userGame.getStatus() == null) {
-            userGame.setStatus(media.getStatus() != null ? media.getStatus() : MediaStatus.PENDING);
+            userGame.setStatus(media.getStatus() != null ? media.getStatus() : MediaStatus.OWNED);
         }
     }
 
