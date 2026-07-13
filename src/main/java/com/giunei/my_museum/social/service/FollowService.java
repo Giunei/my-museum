@@ -12,6 +12,8 @@ import com.giunei.my_museum.profile.FollowRelationStatus;
 import com.giunei.my_museum.profile.entity.Profile;
 import com.giunei.my_museum.profile.service.ProfileAccessService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,6 +120,36 @@ public class FollowService {
                 .stream()
                 .map(follow -> toFollowRequestResponse(follow.getFollower()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FollowRequestResponse> listFollowers(String username, int page, int size) {
+        User target = profileAccessService.requireUserWithFollowListsAccess(username);
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+
+        return followRepository
+                .findByFollowing_IdAndStatusOrderByIdDesc(
+                        target.getId(),
+                        FollowStatus.ACCEPTED,
+                        PageRequest.of(safePage, safeSize)
+                )
+                .map(follow -> toFollowRequestResponse(follow.getFollower()));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FollowRequestResponse> listFollowing(String username, int page, int size) {
+        User target = profileAccessService.requireUserWithFollowListsAccess(username);
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+
+        return followRepository
+                .findByFollower_IdAndStatusOrderByIdDesc(
+                        target.getId(),
+                        FollowStatus.ACCEPTED,
+                        PageRequest.of(safePage, safeSize)
+                )
+                .map(follow -> toFollowRequestResponse(follow.getFollowing()));
     }
 
     public FollowRelationStatus getFollowRelationStatus(User follower, String followingUsername) {

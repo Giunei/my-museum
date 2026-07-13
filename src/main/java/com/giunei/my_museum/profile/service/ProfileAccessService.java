@@ -36,6 +36,29 @@ public class ProfileAccessService {
         }
     }
 
+    /**
+     * Followers / following lists: owner always; others only when the profile is public
+     * (accepted followers of a private profile are not enough).
+     */
+    public User requireUserWithFollowListsAccess(String username) {
+        User target = userLookupService.requireByUsername(username);
+        requireFollowListsAccess(target);
+        return target;
+    }
+
+    public void requireFollowListsAccess(User target) {
+        if (!canViewFollowLists(target, SecurityUtils.getAuthenticatedUserOrNull())) {
+            throw new AccessDeniedException(PRIVATE_PROFILE_MESSAGE);
+        }
+    }
+
+    public boolean canViewFollowLists(User target, User viewer) {
+        if (isOwner(target, viewer)) {
+            return true;
+        }
+        return !isPrivateProfile(target);
+    }
+
     public boolean canViewFullProfile(User target, User viewer) {
         if (isOwner(target, viewer)) {
             return true;

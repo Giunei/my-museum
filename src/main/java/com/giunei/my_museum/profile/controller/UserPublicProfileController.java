@@ -35,6 +35,8 @@ import com.giunei.my_museum.user.entity.User;
 import com.giunei.my_museum.preference.dto.PreferenceResponse;
 import com.giunei.my_museum.preference.service.PreferenceService;
 import com.giunei.my_museum.profile.service.ProfileAccessService;
+import com.giunei.my_museum.social.dto.FollowRequestResponse;
+import com.giunei.my_museum.social.service.FollowService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +54,7 @@ import java.util.List;
 public class UserPublicProfileController {
 
     private final ProfileAccessService profileAccessService;
+    private final FollowService followService;
     private final AchievementService achievementService;
     private final UserGoalService userGoalService;
     private final RecentActivityService recentActivityService;
@@ -64,6 +67,24 @@ public class UserPublicProfileController {
     private final PreferenceService preferenceService;
     private final LolService lolService;
     private final SteamService steamService;
+
+    @GetMapping("/followers")
+    public Page<FollowRequestResponse> followers(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size
+    ) {
+        return followService.listFollowers(username, page, size);
+    }
+
+    @GetMapping("/following")
+    public Page<FollowRequestResponse> following(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size
+    ) {
+        return followService.listFollowing(username, page, size);
+    }
 
     @GetMapping("/achievements")
     public List<AchievementResponse> achievements(

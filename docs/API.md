@@ -53,6 +53,10 @@ Ambos são `null` quando o visitante não tem acesso ao museu.
 | GET | `/follow/requests` |
 | POST | `/follow/requests/{username}/accept` |
 | POST | `/follow/requests/{username}/reject` |
+| GET | `/users/{username}/followers?page&size` |
+| GET | `/users/{username}/following?page&size` |
+
+`GET /users/{username}/followers` e `.../following`: dono sempre; outros só se o perfil **não** for privado (`403` caso contrário). Pública (sem auth ok). Resposta: `Page` de `{ userId, username, profileImageUrl }`.
 
 Perfil privado: follow vira `PENDING` até o dono aceitar.
 
@@ -64,6 +68,7 @@ Prefixo: `/users/{username}/`
 
 Requer permissão (dono, seguidor aceito ou perfil público). Caso contrário: **403**.
 
+- `followers`, `following` — exceção: só dono **ou** perfil público (seguidor aceito de privado **não** vê)
 - `achievements`, `achievements/count`
 - `activities/recent`
 - `books/highlighted`, `books/summary`, `books/favorite-authors`, `books/reading-now`

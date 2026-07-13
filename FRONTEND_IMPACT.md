@@ -265,3 +265,4 @@ Migrations consolidadas em V1–V3. Reset do banco ao trocar schema base.
 - [ ] Upload de perfil: mostrar `error` do `400` (GIF / tipo inválido)
 - [ ] `PATCH /profile`: username/email + trocar tokens se username mudar; usar `account` do `/profile/me`
 - [ ] Login/cadastro: tratar `429` (rate limit) e header `Retry-After`
+- [ ] `GET /users/{username}/followers` e `/following` — listas (perfil público ou dono)

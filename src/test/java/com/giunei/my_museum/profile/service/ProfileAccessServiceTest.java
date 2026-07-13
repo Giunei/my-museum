@@ -72,6 +72,31 @@ class ProfileAccessServiceTest extends AbstractUnitTest {
     }
 
     @Test
+    void should_allowFollowersList_when_viewerIsOwnerOfPrivateProfile() {
+        var owner = TestFixtures.userWithProfile(1L, "owner", true);
+
+        assertThat(profileAccessService.canViewFollowLists(owner, owner)).isTrue();
+    }
+
+    @Test
+    void should_allowFollowersList_when_profileIsPublic() {
+        var owner = TestFixtures.userWithProfile(1L, "owner", false);
+        var viewer = TestFixtures.user(2L, "viewer");
+
+        assertThat(profileAccessService.canViewFollowLists(owner, viewer)).isTrue();
+        assertThat(profileAccessService.canViewFollowLists(owner, null)).isTrue();
+    }
+
+    @Test
+    void should_denyFollowersList_when_profileIsPrivateAndViewerIsNotOwner() {
+        var owner = TestFixtures.userWithProfile(1L, "owner", true);
+        var viewer = TestFixtures.user(2L, "viewer");
+
+        assertThat(profileAccessService.canViewFollowLists(owner, viewer)).isFalse();
+        assertThat(profileAccessService.canViewFollowLists(owner, null)).isFalse();
+    }
+
+    @Test
     void should_throwAccessDenied_when_privateProfileIsNotAccessible() {
         var owner = TestFixtures.userWithProfile(1L, "owner", true);
 

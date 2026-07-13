@@ -4,6 +4,7 @@ import com.giunei.my_museum.common.exception.BusinessException;
 import com.giunei.my_museum.common.exception.UserNotFoundException;
 import com.giunei.my_museum.profile.FollowRelationStatus;
 import com.giunei.my_museum.profile.service.ProfileAccessService;
+import com.giunei.my_museum.social.dto.FollowRequestResponse;
 import com.giunei.my_museum.social.entity.Follow;
 import com.giunei.my_museum.social.entity.FollowStatus;
 import com.giunei.my_museum.social.repository.FollowRepository;
@@ -14,12 +15,17 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -105,5 +111,51 @@ class FollowServiceTest extends AbstractUnitTest {
         followService.unfollow(follower, "following");
 
         verify(followRepository).delete(follow);
+    }
+
+    @Test
+    void should_listAcceptedFollowers() {
+        var owner = TestFixtures.userWithProfile(1L, "owner", false);
+        var followerUser = TestFixtures.userWithProfile(2L, "alice", false);
+        var follow = new Follow();
+        follow.setFollower(followerUser);
+        follow.setFollowing(owner);
+        follow.setStatus(FollowStatus.ACCEPTED);
+
+        when(profileAccessService.requireUserWithFollowListsAccess("owner")).thenReturn(owner);
+        when(followRepository.findByFollowing_IdAndStatusOrderByIdDesc(
+                eq(1L),
+                eq(FollowStatus.ACCEPTED),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(follow)));
+
+        Page<FollowRequestResponse> page = followService.listFollowers("owner", 0, 20);
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().getFirst().username()).isEqualTo("alice");
+        assertThat(page.getContent().getFirst().userId()).isEqualTo(2L);
+    }
+
+    @Test
+    void should_listAcceptedFollowing() {
+        var owner = TestFixtures.userWithProfile(1L, "owner", false);
+        var followedUser = TestFixtures.userWithProfile(3L, "bob", false);
+        var follow = new Follow();
+        follow.setFollower(owner);
+        follow.setFollowing(followedUser);
+        follow.setStatus(FollowStatus.ACCEPTED);
+
+        when(profileAccessService.requireUserWithFollowListsAccess("owner")).thenReturn(owner);
+        when(followRepository.findByFollower_IdAndStatusOrderByIdDesc(
+                eq(1L),
+                eq(FollowStatus.ACCEPTED),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(follow)));
+
+        Page<FollowRequestResponse> page = followService.listFollowing("owner", 0, 20);
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().getFirst().username()).isEqualTo("bob");
+        assertThat(page.getContent().getFirst().userId()).isEqualTo(3L);
     }
 }
