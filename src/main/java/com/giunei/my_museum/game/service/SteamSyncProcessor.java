@@ -98,7 +98,12 @@ public class SteamSyncProcessor {
         SteamAccount account = steamService.getAccount(user);
         SteamOwnedGamesResponse response = steamClient.getOwnedGames(account.getSteamId64());
 
-        if (response == null || response.response() == null || response.response().games() == null) {
+        if (SteamService.isGameLibraryHidden(response)) {
+            statusService.failSync(userId, SteamService.PRIVATE_LIBRARY_MESSAGE);
+            return;
+        }
+
+        if (response.response().games() == null || response.response().games().isEmpty()) {
             statusService.failSync(userId, "Nenhum jogo encontrado na biblioteca Steam");
             return;
         }

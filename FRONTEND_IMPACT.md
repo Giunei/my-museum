@@ -262,6 +262,22 @@ Novo valor de status:
 
 ---
 
+## 5f. Conexão Steam — perfil/biblioteca privados
+
+No callback OpenID, se falhar (perfil privado, biblioteca oculta, cancelamento, etc.), o back redireciona para:
+
+`{FRONTEND_URL}/steam/connected?error=<mensagem>`
+
+Exemplos de `error`:
+- perfil privado → instrução para deixar perfil público
+- biblioteca oculta → “Detalhes do jogo” público na Steam
+
+No Angular: ler `error` da query e mostrar toast/alerta; limpar a query depois.
+
+Sync (`GET /steam/sync/status`): se a biblioteca ficar privada depois, `message` traz o mesmo texto de biblioteca privada.
+
+---
+
 ## 6. Mudanças anteriores (ainda válidas)
 
 ### `ProfileResponse`
@@ -293,3 +309,4 @@ Migrations consolidadas em V1–V3. Reset do banco ao trocar schema base.
 - [ ] `GET /users/{username}/followers` e `/following` — listas (perfil público ou dono)
 - [ ] Jogos: tratar `OWNED` (biblioteca Steam); wishlist só `PENDING`
 - [ ] Busca de livros: cache 12h — resultados podem estar um pouco defasados
+- [ ] Steam: em `/steam/connected` ler query `error` e exibir ao usuário

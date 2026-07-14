@@ -21,7 +21,11 @@ public record SteamPlayerSummaryResponse(
             String profileurl,
             String avatar,
             String avatarmedium,
-            String avatarfull
+            String avatarfull,
+            /**
+             * 1 = Private, 2 = Friends only, 3 = Public
+             */
+            Integer communityvisibilitystate
     ) {
     }
 }

@@ -1,9 +1,11 @@
 package com.giunei.my_museum.game.service;
 
+import com.giunei.my_museum.common.exception.BusinessException;
 import com.giunei.my_museum.common.exception.ExternalApiException;
 import com.giunei.my_museum.common.security.SecurityUtils;
 import com.giunei.my_museum.game.client.SteamClient;
 import com.giunei.my_museum.game.dto.SteamConnectionStatusResponse;
+import com.giunei.my_museum.game.dto.SteamOwnedGamesResponse;
 import com.giunei.my_museum.game.dto.SteamPlayerSummaryResponse;
 import com.giunei.my_museum.game.dto.SteamSummaryResponse;
 import com.giunei.my_museum.game.entity.SteamAccount;
@@ -32,6 +34,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SteamService {
 
+    public static final String PRIVATE_PROFILE_MESSAGE =
+            "Seu perfil Steam está privado. Em Steam → Perfil → Editar perfil → Privacidade, deixe o perfil público.";
+
+    public static final String PRIVATE_LIBRARY_MESSAGE =
+            "Sua biblioteca de jogos Steam está privada ou oculta. Em Privacidade do perfil, deixe \"Detalhes do jogo\" como Público e tente novamente.";
+
+    private static final int COMMUNITY_VISIBILITY_PUBLIC = 3;
+
     private final SteamClient steamClient;
     private final SteamAccountRepository steamAccountRepository;
     private final UserGameRepository userGameRepository;
@@ -46,11 +56,16 @@ public class SteamService {
     @Transactional
     public void connect(User user, String steamId64) {
         SteamPlayerSummaryResponse playerSummary = steamClient.getPlayer(steamId64);
-        if (playerSummary == null || playerSummary.response() == null || playerSummary.response().players() == null || playerSummary.response().players().isEmpty()) {
+        if (playerSummary == null
+                || playerSummary.response() == null
+                || playerSummary.response().players() == null
+                || playerSummary.response().players().isEmpty()) {
             throw new ExternalApiException("Não foi possível obter dados da Steam");
         }
 
-        SteamPlayerSummaryResponse.Player player = playerSummary.response().players().get(0);
+        SteamPlayerSummaryResponse.Player player = playerSummary.response().players().getFirst();
+        requirePublicSteamProfile(player);
+        requireAccessibleGameLibrary(steamId64);
 
         SteamAccount account = steamAccountRepository.findByUser(user)
                 .orElse(new SteamAccount());
@@ -64,6 +79,30 @@ public class SteamService {
         steamAccountRepository.save(account);
     }
 
+    public void requirePublicSteamProfile(SteamPlayerSummaryResponse.Player player) {
+        Integer visibility = player.communityvisibilitystate();
+        if (visibility != null && visibility != COMMUNITY_VISIBILITY_PUBLIC) {
+            throw new BusinessException(PRIVATE_PROFILE_MESSAGE);
+        }
+    }
+
+    public void requireAccessibleGameLibrary(String steamId64) {
+        SteamOwnedGamesResponse ownedGames = steamClient.getOwnedGames(steamId64);
+        if (isGameLibraryHidden(ownedGames)) {
+            throw new BusinessException(PRIVATE_LIBRARY_MESSAGE);
+        }
+    }
+
+    /**
+     * Steam returns {@code {"response":{}}} (no game_count) when game details are private/hidden.
+     */
+    public static boolean isGameLibraryHidden(SteamOwnedGamesResponse ownedGames) {
+        if (ownedGames == null || ownedGames.response() == null) {
+            return true;
+        }
+        return ownedGames.response().game_count() == null;
+    }
+
     public SteamAccount getAccount(User user) {
         return steamAccountRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Steam account not connected"));
@@ -72,11 +111,11 @@ public class SteamService {
     public SteamConnectionStatusResponse getConnectionStatus() {
         User user = SecurityUtils.getAuthenticatedUser();
         Optional<SteamAccount> account = steamAccountRepository.findByUser(user);
-        
+
         if (account.isEmpty()) {
             return new SteamConnectionStatusResponse(false, null, null, null);
         }
-        
+
         SteamAccount steamAccount = account.get();
         return new SteamConnectionStatusResponse(
                 true,

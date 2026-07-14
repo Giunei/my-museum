@@ -2,6 +2,7 @@ package com.giunei.my_museum.game.service;
 
 import com.giunei.my_museum.auth.service.JwtService;
 import com.giunei.my_museum.common.exception.BusinessException;
+import com.giunei.my_museum.common.exception.ExternalApiException;
 import com.giunei.my_museum.common.exception.NotFoundException;
 import com.giunei.my_museum.common.security.SecurityUtils;
 import com.giunei.my_museum.user.entity.User;
@@ -63,6 +64,18 @@ public class SteamAuthService {
 
     @Transactional
     public String handleCallback(String state, Map<String, String> params) {
+        try {
+            return completeCallback(state, params);
+        } catch (BusinessException | ExternalApiException | NotFoundException ex) {
+            log.warn("Steam connect failed: {}", ex.getMessage());
+            return frontendErrorRedirect(ex.getMessage());
+        } catch (Exception ex) {
+            log.error("Unexpected Steam callback failure", ex);
+            return frontendErrorRedirect("Não foi possível conectar a conta Steam. Tente novamente.");
+        }
+    }
+
+    private String completeCallback(String state, Map<String, String> params) {
         String mode = params.get("openid.mode");
 
         if ("cancel".equals(mode)) {
@@ -111,6 +124,18 @@ public class SteamAuthService {
         steamService.connect(user, steamId64);
 
         return trimTrailingSlash(frontendUrl) + "/steam/connected";
+    }
+
+    private String frontendErrorRedirect(String message) {
+        String safeMessage = message != null && !message.isBlank()
+                ? message
+                : "Não foi possível conectar a conta Steam.";
+        return UriComponentsBuilder
+                .fromUriString(trimTrailingSlash(frontendUrl) + "/steam/connected")
+                .queryParam("error", safeMessage)
+                .build()
+                .encode()
+                .toUriString();
     }
 
     private boolean validateOpenIdResponse(Map<String, String> openIdParams) {
