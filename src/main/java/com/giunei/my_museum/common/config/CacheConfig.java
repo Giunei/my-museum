@@ -13,6 +13,8 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @EnableCaching
 @Configuration
@@ -21,21 +23,34 @@ import java.time.Duration;
 public class CacheConfig {
 
     private static final Duration DEFAULT_TTL = Duration.ofMinutes(10);
+    private static final Duration BOOKS_SEARCH_TTL = Duration.ofHours(12);
+    private static final Duration BOOKS_CURATED_TTL = Duration.ofHours(24);
 
     @Bean
     public RedisCacheConfiguration cacheConfiguration() {
-        return RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(DEFAULT_TTL)
-                .disableCachingNullValues()
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.json()));
+        return baseCacheConfiguration(DEFAULT_TTL);
     }
 
     @Bean
     @Primary
     public RedisCacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
+        RedisCacheConfiguration defaults = cacheConfiguration();
+
+        Map<String, RedisCacheConfiguration> perCache = new HashMap<>();
+        perCache.put("books:search", baseCacheConfiguration(BOOKS_SEARCH_TTL));
+        perCache.put("books:curated", baseCacheConfiguration(BOOKS_CURATED_TTL));
+
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(cacheConfiguration())
+                .cacheDefaults(defaults)
+                .withInitialCacheConfigurations(perCache)
                 .transactionAware()
                 .build();
+    }
+
+    private static RedisCacheConfiguration baseCacheConfiguration(Duration ttl) {
+        return RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(ttl)
+                .disableCachingNullValues()
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.json()));
     }
 }

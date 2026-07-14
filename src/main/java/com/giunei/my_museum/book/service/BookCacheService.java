@@ -13,9 +13,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,14 +40,14 @@ public class BookCacheService {
             "A Hora da Estrela - Clarice Lispector",
             "O Homem Mais Rico da Babilônia - George S. Clason",
             "A Psicologia Financeira - Morgan Housel"
-
     );
 
+    @Cacheable(value = "books:search", key = "#root.target.cacheKey(#request)")
     public List<BookResponse> search(BookSearchRequest request) {
         String query = queryBuilder.build(request);
 
-        int page = request.page();
-        int size = request.size() != 0 ? Math.min(request.size(), 20) : 10;
+        int page = Math.max(request.page(), 0);
+        int size = request.size() != 0 ? Math.min(Math.max(request.size(), 1), 20) : 10;
         String language = queryBuilder.normalizeLanguage(request.language());
         String orderBy = request.sort() == null ? "relevance" : request.sort().apiOrderBy();
 
@@ -63,6 +65,32 @@ public class BookCacheService {
         }
 
         return books;
+    }
+
+    /**
+     * Stable Redis key: same query with different case/spacing hits one Google Books call.
+     */
+    public String cacheKey(BookSearchRequest request) {
+        String query = queryBuilder.build(request).toLowerCase(Locale.ROOT).trim();
+        String language = Objects.toString(queryBuilder.normalizeLanguage(request.language()), "");
+        String sort = request.sort() == null ? "relevance" : request.sort().name();
+        String genres = request.genres() == null
+                ? ""
+                : request.genres().stream()
+                .filter(Objects::nonNull)
+                .map(g -> g.toLowerCase(Locale.ROOT).trim())
+                .filter(g -> !g.isEmpty())
+                .sorted()
+                .collect(Collectors.joining(","));
+        int page = Math.max(request.page(), 0);
+        int size = request.size() != 0 ? Math.min(Math.max(request.size(), 1), 20) : 10;
+
+        return "q=" + query
+                + "|l=" + language
+                + "|s=" + sort
+                + "|g=" + genres
+                + "|p=" + page
+                + "|z=" + size;
     }
 
     @Cacheable(value = "books:curated")

@@ -160,6 +160,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ExternalApiException.class)
     public ResponseEntity<ErrorResponse> handleExternalApi(ExternalApiException ex, HttpServletRequest request) {
+        Throwable cause = ex.getCause();
+        if (cause != null) {
+            log.warn("External API failure on {}: {} | cause: {}",
+                    request.getRequestURI(),
+                    ex.getMessage(),
+                    cause.getMessage());
+        } else {
+            log.warn("External API failure on {}: {}", request.getRequestURI(), ex.getMessage());
+        }
         return buildError(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
 

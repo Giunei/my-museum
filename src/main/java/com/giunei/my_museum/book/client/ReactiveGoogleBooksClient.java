@@ -75,8 +75,8 @@ public class ReactiveGoogleBooksClient {
 
     private boolean isRetriableError(Throwable error) {
         if (error instanceof WebClientResponseException responseException) {
-            int status = responseException.getStatusCode().value();
-            return status == 429 || responseException.getStatusCode().is5xxServerError();
+            // Never retry 429 — burns quota and makes daily limit worse.
+            return responseException.getStatusCode().is5xxServerError();
         }
 
         return error instanceof WebClientRequestException || error instanceof TimeoutException;

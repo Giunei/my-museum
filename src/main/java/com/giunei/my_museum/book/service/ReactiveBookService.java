@@ -98,7 +98,7 @@ public class ReactiveBookService {
     }
 
     @Cacheable(value = "books:search",
-            key = "#query + '-' + #page + '-' + #size")
+            key = "(#query == null ? '' : #query.trim().toLowerCase()) + '-' + #page + '-' + #size")
     public Mono<BookPageResponse> search(String query, int page, int size) {
         int safeSize = Math.min(size, 20);
 

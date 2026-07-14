@@ -253,6 +253,15 @@ Novo valor de status:
 
 ---
 
+## 5e. Cache de busca de livros (Google Books quota)
+
+- `GET /books/search` agora usa Redis (`books:search`, TTL **12h**)
+- Curated (`books:curated`) TTL **24h**
+- Mesma busca (query/filtros/página) não consome cota de novo até expirar
+- Resultado pode ficar até 12h “congelado” (ratings etc.) — trade-off aceitável vs cota diária
+
+---
+
 ## 6. Mudanças anteriores (ainda válidas)
 
 ### `ProfileResponse`
@@ -283,3 +292,4 @@ Migrations consolidadas em V1–V3. Reset do banco ao trocar schema base.
 - [ ] Login/cadastro: tratar `429` (rate limit) e header `Retry-After`
 - [ ] `GET /users/{username}/followers` e `/following` — listas (perfil público ou dono)
 - [ ] Jogos: tratar `OWNED` (biblioteca Steam); wishlist só `PENDING`
+- [ ] Busca de livros: cache 12h — resultados podem estar um pouco defasados
