@@ -56,6 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/reactive/games/curated/stream").permitAll()
                         .requestMatchers("/steam/callback", "/steam/callback/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/username/*/profile").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/users/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/*/followers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/*/following").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users/*/achievements", "/users/*/achievements/**").permitAll()
