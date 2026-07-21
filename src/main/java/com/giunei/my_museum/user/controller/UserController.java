@@ -41,7 +41,7 @@ public class UserController {
     public List<UserSearchResponse> searchByUsername(@RequestParam String query) {
         return userRepository.searchByUsername(query)
                 .stream()
-                .map(user -> new UserSearchResponse(user.getId(), user.getUsername()))
+                .map(user -> new UserSearchResponse(user.getId(), user.getUsername(), user.getProfile().getProfileImageUrl()))
                 .toList();
     }
 
